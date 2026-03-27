@@ -117,6 +117,10 @@ pub struct Apu {
     /// Fractional cycle accumulator for sample generation.
     sample_accum: f64,
 
+    /// High-pass filter capacitor state for left and right channels.
+    hpf_cap_l: f32,
+    hpf_cap_r: f32,
+
     /// Output sample buffer: interleaved (L, R) f32 pairs.
     pub sample_buf: Vec<f32>,
 }
@@ -138,6 +142,8 @@ impl Apu {
             frame_seq_step: 0,
             prev_div_bit12: false,
             sample_accum: 0.0,
+            hpf_cap_l: 0.0,
+            hpf_cap_r: 0.0,
             sample_buf: Vec::with_capacity(1024),
         }
     }
@@ -354,10 +360,17 @@ impl Apu {
         l = (l * vol_l) / 480.0;
         r = (r * vol_r) / 480.0;
 
-        // High-pass filter to remove DC bias (simple leaky integrator)
+        // High-pass filter to remove DC bias (simple leaky integrator).
         // coefficient ≈ 0.999 at 44 100 Hz → -3 dB at ~7 Hz
-        self.sample_buf.push(l);
-        self.sample_buf.push(r);
+        // cap tracks the DC component; subtracting it centres the signal on 0.
+        const HPF_COEFF: f32 = 0.999;
+        let out_l = l - self.hpf_cap_l;
+        self.hpf_cap_l = l - out_l * HPF_COEFF;
+        let out_r = r - self.hpf_cap_r;
+        self.hpf_cap_r = r - out_r * HPF_COEFF;
+
+        self.sample_buf.push(out_l);
+        self.sample_buf.push(out_r);
     }
 
     /// Drain the sample buffer — call once per frame after step_frame().
