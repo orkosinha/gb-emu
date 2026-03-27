@@ -4,25 +4,28 @@
 //! general-purpose RAM/ROM. [`MemoryBus`] intercepts accesses to hardware
 //! register addresses and delegates to the owning component.
 
+use crate::apu::Apu;
 use crate::joypad::Joypad;
 use crate::memory::Memory;
 use crate::timer::Timer;
 
 /// MemoryBus routes memory accesses to the appropriate component.
-/// This ensures Timer and Joypad registers are properly integrated.
+/// This ensures Timer, Joypad, and APU registers are properly integrated.
 pub struct MemoryBus<'a> {
     memory: &'a mut Memory,
     timer: &'a mut Timer,
     joypad: &'a mut Joypad,
+    apu: &'a mut Apu,
 }
 
 impl<'a> MemoryBus<'a> {
-    pub fn new(memory: &'a mut Memory, timer: &'a mut Timer, joypad: &'a mut Joypad) -> Self {
-        MemoryBus {
-            memory,
-            timer,
-            joypad,
-        }
+    pub fn new(
+        memory: &'a mut Memory,
+        timer: &'a mut Timer,
+        joypad: &'a mut Joypad,
+        apu: &'a mut Apu,
+    ) -> Self {
+        MemoryBus { memory, timer, joypad, apu }
     }
 
     #[inline]
@@ -32,6 +35,8 @@ impl<'a> MemoryBus<'a> {
             0xFF00 => self.joypad.read(),
             // Timer registers
             0xFF04..=0xFF07 => self.timer.read(addr),
+            // APU registers + wave RAM
+            0xFF10..=0xFF3F => self.apu.read(addr),
             // All other addresses go to memory
             _ => self.memory.read(addr),
         }
@@ -44,6 +49,8 @@ impl<'a> MemoryBus<'a> {
             0xFF00 => self.joypad.write(value),
             // Timer registers
             0xFF04..=0xFF07 => self.timer.write(addr, value),
+            // APU registers + wave RAM
+            0xFF10..=0xFF3F => self.apu.write(addr, value),
             // All other addresses go to memory
             _ => self.memory.write(addr, value),
         }

@@ -342,6 +342,7 @@ impl Default for Cpu {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::apu::Apu;
     use crate::interrupts::InterruptController;
     use crate::joypad::Joypad;
     use crate::memory::Memory;
@@ -352,12 +353,13 @@ mod tests {
         memory: Memory,
         timer: Timer,
         joypad: Joypad,
+        apu: Apu,
         ic: InterruptController,
     }
 
     impl TestContext {
         fn step(&mut self) -> u32 {
-            let mut bus = MemoryBus::new(&mut self.memory, &mut self.timer, &mut self.joypad);
+            let mut bus = MemoryBus::new(&mut self.memory, &mut self.timer, &mut self.joypad, &mut self.apu);
             self.cpu.step(&mut bus, &mut self.ic)
         }
     }
@@ -378,6 +380,7 @@ mod tests {
             memory: mem,
             timer: Timer::new(),
             joypad: Joypad::new(),
+            apu: Apu::new(),
             ic: InterruptController::new(),
         }
     }
@@ -634,7 +637,7 @@ mod tests {
 
         ctx.step(); // LD (HL), 0x42
         // Read from WRAM at 0xC000
-        let bus = MemoryBus::new(&mut ctx.memory, &mut ctx.timer, &mut ctx.joypad);
+        let bus = MemoryBus::new(&mut ctx.memory, &mut ctx.timer, &mut ctx.joypad, &mut ctx.apu);
         assert_eq!(bus.read(0xC000), 0x42);
     }
 

@@ -9,6 +9,7 @@
 //! Both frontends delegate to `GameBoyCore`, which owns the CPU, memory,
 //! PPU, timer, interrupt controller, and joypad.
 
+pub mod apu;
 mod bus;
 mod core;
 mod cpu;

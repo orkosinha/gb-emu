@@ -69,4 +69,28 @@ size_t gb_get_save_size(GBHandle handle);
 size_t gb_get_save_data(GBHandle handle, uint8_t* buffer, size_t buffer_len);
 bool gb_load_save_data(GBHandle handle, const uint8_t* data, size_t len);
 
+// Audio / APU
+// Samples are interleaved stereo f32: [L0, R0, L1, R1, ...]
+// Call gb_audio_clear_samples() once per frame after consuming the buffer.
+uint32_t gb_audio_sample_rate(void);
+const float* gb_audio_sample_ptr(GBHandle handle);
+size_t gb_audio_sample_len(GBHandle handle);
+void gb_audio_clear_samples(GBHandle handle);
+bool gb_apu_powered(GBHandle handle);
+
+// APU channel debug (for LSDJ-style visualiser)
+uint16_t gb_apu_ch1_freq_reg(GBHandle handle);
+uint8_t  gb_apu_ch1_volume(GBHandle handle);
+bool     gb_apu_ch1_enabled(GBHandle handle);
+uint16_t gb_apu_ch2_freq_reg(GBHandle handle);
+uint8_t  gb_apu_ch2_volume(GBHandle handle);
+bool     gb_apu_ch2_enabled(GBHandle handle);
+uint16_t gb_apu_ch3_freq_reg(GBHandle handle);
+uint8_t  gb_apu_ch3_vol_code(GBHandle handle);
+bool     gb_apu_ch3_enabled(GBHandle handle);
+size_t   gb_apu_ch3_wave_ram(GBHandle handle, uint8_t* buf, size_t len);
+uint8_t  gb_apu_ch4_volume(GBHandle handle);
+bool     gb_apu_ch4_enabled(GBHandle handle);
+uint8_t  gb_apu_ch4_nr43(GBHandle handle);
+
 #endif /* GB_EMU_H */

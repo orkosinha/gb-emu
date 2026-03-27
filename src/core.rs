@@ -3,6 +3,7 @@
 //! [`GameBoyCore`] owns all emulator components and provides the main
 //! `step_frame` loop, ROM loading, button input, and camera integration.
 
+use crate::apu::Apu;
 use crate::bus::MemoryBus;
 use crate::cpu::Cpu;
 use crate::interrupts::{Interrupt, InterruptController};
@@ -50,6 +51,7 @@ pub(crate) struct GameBoyCore {
     pub(crate) memory: Memory,
     pub(crate) ppu: Ppu,
     pub(crate) timer: Timer,
+    pub(crate) apu: Apu,
     pub(crate) interrupts: InterruptController,
     pub(crate) joypad: Joypad,
     pub(crate) frame_buffer: DoubleBuffer<FRAME_BUFFER_SIZE>,
@@ -66,6 +68,7 @@ impl GameBoyCore {
             memory: Memory::new(),
             ppu: Ppu::new(),
             timer: Timer::new(),
+            apu: Apu::new(),
             interrupts: InterruptController::new(),
             joypad: Joypad::new(),
             frame_buffer: DoubleBuffer::new(),
@@ -83,6 +86,7 @@ impl GameBoyCore {
         self.cpu.reset(cgb_mode);
         self.ppu.reset(cgb_mode);
         self.timer = crate::timer::Timer::new();
+        self.apu = crate::apu::Apu::new();
         self.interrupts = crate::interrupts::InterruptController::new();
         self.joypad = crate::joypad::Joypad::new();
         self.frame_count = 0;
@@ -104,7 +108,12 @@ impl GameBoyCore {
         };
         while cycles_elapsed < cycles_per_frame {
             let cycles = {
-                let mut bus = MemoryBus::new(&mut self.memory, &mut self.timer, &mut self.joypad);
+                let mut bus = MemoryBus::new(
+                    &mut self.memory,
+                    &mut self.timer,
+                    &mut self.joypad,
+                    &mut self.apu,
+                );
                 self.cpu.step(&mut bus, &mut self.interrupts)
             };
 
@@ -113,6 +122,8 @@ impl GameBoyCore {
             if self.ppu.took_hblank_step() {
                 self.memory.tick_hdma_hblank();
             }
+            // APU ticks in lockstep; div_counter drives the frame sequencer.
+            self.apu.tick(cycles, self.timer.div_counter());
 
             cycles_elapsed += cycles;
             instructions_this_frame += 1;
@@ -133,7 +144,12 @@ impl GameBoyCore {
     #[cfg_attr(not(feature = "wasm"), allow(dead_code))] // wasm: step_instruction
     pub(crate) fn step_single(&mut self) -> u32 {
         let cycles = {
-            let mut bus = MemoryBus::new(&mut self.memory, &mut self.timer, &mut self.joypad);
+            let mut bus = MemoryBus::new(
+                &mut self.memory,
+                &mut self.timer,
+                &mut self.joypad,
+                &mut self.apu,
+            );
             self.cpu.step(&mut bus, &mut self.interrupts)
         };
 
@@ -142,6 +158,7 @@ impl GameBoyCore {
         if self.ppu.took_hblank_step() {
             self.memory.tick_hdma_hblank();
         }
+        self.apu.tick(cycles, self.timer.div_counter());
 
         self.total_cycles += cycles as u64;
         self.instruction_count += 1;

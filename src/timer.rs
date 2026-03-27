@@ -73,6 +73,12 @@ impl Timer {
         }
     }
 
+    /// Expose the raw 16-bit internal counter for APU frame-sequencer timing.
+    #[inline]
+    pub fn div_counter(&self) -> u16 {
+        self.div_counter
+    }
+
     /// Read timer registers (0xFF04-0xFF07).
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
