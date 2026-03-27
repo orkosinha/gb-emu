@@ -2,6 +2,9 @@
 name = "gb-emu"
 version = "0.1.0"
 edition = "2024"
+description = "Game Boy Camera emulator core"
+repository = "https://github.com/orkosinha/gb-emu"
+license = "MIT"
 
 [lib]
 crate-type = ["cdylib", "staticlib"]
@@ -16,9 +19,6 @@ wasm-bindgen = { version = "0.2", optional = true }
 js-sys = { version = "0.3", optional = true }
 web-sys = { version = "0.3", features = ["console"], optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
-
-[build-dependencies]
-cbindgen = "0.27"
 
 [profile.release]
 opt-level = 3
