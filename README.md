@@ -32,7 +32,7 @@ API: [`src/core.rs`](https://github.com/orkosinha/gb-emu/blob/main/src/core.rs)
 ## Release
 
 ```bash
-cp .env.example .env        # add NPM_TOKEN
+# add NPM_TOKEN
 mise run setup:secrets      # push token to GitHub
 mise run release -- 0.2.0   # tag + push → CI publishes to npm
 ```
