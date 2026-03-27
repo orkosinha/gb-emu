@@ -24,8 +24,10 @@ API: [`include/gb_emu.h`](https://github.com/orkosinha/gb-emu/blob/main/include/
 ### Rust
 
 ```toml
-gb-emu = { git = "https://github.com/orkosinha/gb-emu", default-features = false }
+gb-emu = { git = "https://github.com/orkosinha/gb-emu" }
 ```
+
+API: [`src/core.rs`](https://github.com/orkosinha/gb-emu/blob/main/src/core.rs)
 
 ## Release
 
