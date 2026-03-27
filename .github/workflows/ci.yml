@@ -11,21 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: jdx/mise-action@v2
       - uses: Swatinem/rust-cache@v2
-      - name: Test
-        run: cargo test --no-default-features
-      - name: Clippy
-        run: cargo clippy --no-default-features -- -D warnings
+      - run: mise run test
+      - run: mise run check
 
   wasm:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
+      - uses: jdx/mise-action@v2
       - uses: Swatinem/rust-cache@v2
-      - uses: jetli/wasm-pack-action@v0.4.0
-      - name: Build WASM
-        run: wasm-pack build --target web --features wasm --no-default-features
+      - run: mise run build

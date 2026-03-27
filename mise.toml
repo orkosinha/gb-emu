@@ -1,0 +1,56 @@
+[tools]
+rust = "latest"
+node = "20"
+"cargo:wasm-pack" = "latest"
+
+[env]
+_.file = ".env"
+
+[tasks.build]
+description = "Build WASM package"
+run = "wasm-pack build --target web --features wasm --no-default-features --scope orkosinha"
+
+[tasks.test]
+description = "Run tests"
+run = "cargo test --no-default-features"
+
+[tasks.check]
+description = "cargo check + clippy"
+run = "cargo check --no-default-features && cargo clippy --no-default-features -- -D warnings"
+
+[tasks.fmt]
+description = "Format code"
+run = "cargo fmt"
+
+[tasks."setup:secrets"]
+description = "Push secrets from .env to GitHub repo secrets (requires gh CLI)"
+run = """
+#!/usr/bin/env bash
+set -e
+if [ -z "$NPM_TOKEN" ]; then
+  echo "NPM_TOKEN is not set. Add it to .env first."
+  exit 1
+fi
+gh secret set NPM_TOKEN --body "$NPM_TOKEN"
+echo "NPM_TOKEN pushed to GitHub secrets."
+"""
+
+[tasks.release]
+description = "Release a version: bump Cargo.toml, commit, tag, push. Usage: mise run release -- 0.2.0"
+run = """
+#!/usr/bin/env bash
+set -e
+VERSION="$1"
+if [ -z "$VERSION" ]; then
+  echo "Usage: mise run release -- <version>  (e.g. mise run release -- 0.2.0)"
+  exit 1
+fi
+# Bump version in Cargo.toml
+sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
+# Commit and tag
+git add Cargo.toml
+git commit -m "v$VERSION"
+git tag "v$VERSION"
+git push && git push --tags
+echo "Released v$VERSION — GitHub Actions will publish to npm."
+"""

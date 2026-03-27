@@ -10,19 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
+      - uses: jdx/mise-action@v2
       - uses: Swatinem/rust-cache@v2
-      - uses: jetli/wasm-pack-action@v0.4.0
-      - name: Build WASM package
-        run: wasm-pack build --target web --features wasm --no-default-features --scope orkosinha
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+      - run: mise run build
       - name: Publish to npm
-        run: wasm-pack publish --access public
+        run: npm publish --access public
         working-directory: pkg
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
