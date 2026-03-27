@@ -29,6 +29,10 @@ pub struct Channel2 {
     env_running: bool,
 }
 
+impl Default for Channel2 {
+    fn default() -> Self { Self::new() }
+}
+
 impl Channel2 {
     pub fn new() -> Self {
         Channel2 {

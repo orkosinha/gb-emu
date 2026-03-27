@@ -121,6 +121,7 @@ impl Logger {
     pub fn error(_category: LogCategory, _msg: &str) {}
 
     #[cfg(not(target_arch = "wasm32"))]
+    #[allow(dead_code)]
     pub fn info_limited(_category: LogCategory, _limiter: &RateLimiter, _msg: &str) {}
 
     #[cfg(not(target_arch = "wasm32"))]

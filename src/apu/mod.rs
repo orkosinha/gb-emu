@@ -121,6 +121,10 @@ pub struct Apu {
     pub sample_buf: Vec<f32>,
 }
 
+impl Default for Apu {
+    fn default() -> Self { Self::new() }
+}
+
 impl Apu {
     pub fn new() -> Self {
         Apu {
@@ -336,9 +340,9 @@ impl Apu {
         let mut r: f32 = 0.0;
 
         let channels = [c1 as f32, c2 as f32, c3 as f32, c4 as f32];
-        for i in 0..4 {
-            if self.nr51 & (1 << (i + 4)) != 0 { l += channels[i]; }
-            if self.nr51 & (1 << i)       != 0 { r += channels[i]; }
+        for (i, &ch) in channels.iter().enumerate() {
+            if self.nr51 & (1 << (i + 4)) != 0 { l += ch; }
+            if self.nr51 & (1 << i)       != 0 { r += ch; }
         }
 
         // NR50 master volume: bits 6-4 = left (0-7), bits 2-0 = right (0-7)
@@ -478,7 +482,7 @@ pub fn freq_to_midi(hz: f32) -> u8 {
         return 255;
     }
     let midi = 69.0 + 12.0 * (hz / 440.0).log2();
-    if midi < 0.0 || midi > 127.0 {
+    if !(0.0..=127.0).contains(&midi) {
         return 255;
     }
     midi.round() as u8

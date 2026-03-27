@@ -1,24 +1,28 @@
 //! Game Boy emulator core.
 //!
 //! This crate implements a cycle-accurate Game Boy (DMG) emulator with support
-//! for the Game Boy Camera cartridge. It exposes two frontend targets:
+//! for the Game Boy Camera cartridge. It exposes three frontend targets:
 //!
+//! - **Native** (default): Pure-Rust API via [`GameBoyCore`].
 //! - **WASM** (`--features wasm`): JavaScript bindings via `wasm-bindgen` for web browsers.
 //! - **iOS** (`--features ios`): C FFI functions for Swift integration.
 //!
-//! Both frontends delegate to `GameBoyCore`, which owns the CPU, memory,
+//! All frontends delegate to [`GameBoyCore`], which owns the CPU, memory,
 //! PPU, timer, interrupt controller, and joypad.
 
 pub mod apu;
 mod bus;
-mod core;
+pub mod core;
 mod cpu;
 mod interrupts;
-mod joypad;
+pub mod joypad;
 mod log;
-pub(crate) mod memory;
+pub mod memory;
 mod ppu;
 mod timer;
+
+pub use core::GameBoyCore;
+pub use joypad::Button;
 
 // FFI module for iOS/native builds
 #[cfg(feature = "ios")]

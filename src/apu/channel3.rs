@@ -24,6 +24,10 @@ pub struct Channel3 {
     pub wave_ram: [u8; 16],
 }
 
+impl Default for Channel3 {
+    fn default() -> Self { Self::new() }
+}
+
 impl Channel3 {
     pub fn new() -> Self {
         Channel3 {

@@ -30,6 +30,10 @@ pub struct Channel4 {
     env_running: bool,
 }
 
+impl Default for Channel4 {
+    fn default() -> Self { Self::new() }
+}
+
 impl Channel4 {
     pub fn new() -> Self {
         Channel4 {
@@ -182,7 +186,7 @@ impl Channel4 {
     }
 
     fn clock_lfsr(&mut self) {
-        let xor_bit = ((self.lfsr & 1) ^ ((self.lfsr >> 1) & 1)) as u16;
+        let xor_bit = (self.lfsr & 1) ^ ((self.lfsr >> 1) & 1);
         self.lfsr = (self.lfsr >> 1) | (xor_bit << 14);
         if self.is_short_lfsr() {
             self.lfsr = (self.lfsr & !(1 << 6)) | (xor_bit << 6);

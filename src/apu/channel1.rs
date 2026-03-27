@@ -42,6 +42,10 @@ pub struct Channel1 {
     sweep_negate_used: bool, // track negate usage for obscure behaviour
 }
 
+impl Default for Channel1 {
+    fn default() -> Self { Self::new() }
+}
+
 impl Channel1 {
     pub fn new() -> Self {
         Channel1 {

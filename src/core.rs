@@ -17,9 +17,13 @@ const CYCLES_PER_FRAME_DOUBLE: u32 = 140_448; // CPU runs 2× but PPU timing unc
 const FRAME_BUFFER_SIZE: usize = 160 * 144 * 4;
 const CAMERA_BUFFER_SIZE: usize = 128 * 112 * 4;
 
-pub(crate) struct DoubleBuffer<const N: usize> {
+pub struct DoubleBuffer<const N: usize> {
     buffers: [Box<[u8; N]>; 2],
     front: usize,
+}
+
+impl<const N: usize> Default for DoubleBuffer<N> {
+    fn default() -> Self { Self::new() }
 }
 
 impl<const N: usize> DoubleBuffer<N> {
@@ -46,7 +50,7 @@ impl<const N: usize> DoubleBuffer<N> {
     }
 }
 
-pub(crate) struct GameBoyCore {
+pub struct GameBoyCore {
     pub(crate) cpu: Cpu,
     pub(crate) memory: Memory,
     pub(crate) ppu: Ppu,
@@ -61,8 +65,12 @@ pub(crate) struct GameBoyCore {
     pub(crate) instruction_count: u64,
 }
 
+impl Default for GameBoyCore {
+    fn default() -> Self { Self::new() }
+}
+
 impl GameBoyCore {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         GameBoyCore {
             cpu: Cpu::new(),
             memory: Memory::new(),
@@ -79,7 +87,7 @@ impl GameBoyCore {
         }
     }
 
-    pub(crate) fn load_rom(&mut self, rom_data: &[u8], cgb_mode: bool) -> Result<(), &'static str> {
+    pub fn load_rom(&mut self, rom_data: &[u8], cgb_mode: bool) -> Result<(), &'static str> {
         // Memory reset first (validates ROM, resets all hardware registers)
         self.memory.load_rom(rom_data, cgb_mode)?;
         // Reset remaining components to their power-on state
@@ -97,7 +105,7 @@ impl GameBoyCore {
 
     /// Run one frame of emulation (~16.74ms of Game Boy time).
     /// Returns the number of instructions executed this frame.
-    pub(crate) fn step_frame(&mut self) -> u32 {
+    pub fn step_frame(&mut self) -> u32 {
         let mut cycles_elapsed: u32 = 0;
         let mut instructions_this_frame: u32 = 0;
 
@@ -142,7 +150,7 @@ impl GameBoyCore {
     /// If a frame boundary is crossed (VBlank entry), renders the frame.
     /// Returns the number of T-cycles consumed.
     #[cfg_attr(not(feature = "wasm"), allow(dead_code))] // wasm: step_instruction
-    pub(crate) fn step_single(&mut self) -> u32 {
+    pub fn step_single(&mut self) -> u32 {
         let cycles = {
             let mut bus = MemoryBus::new(
                 &mut self.memory,
@@ -177,7 +185,7 @@ impl GameBoyCore {
         self.frame_buffer.swap();
     }
 
-    pub(crate) fn set_button(&mut self, button: u8, pressed: bool) {
+    pub fn set_button(&mut self, button: u8, pressed: bool) {
         if let Some(btn) = crate::joypad::Button::from_u8(button) {
             self.joypad.set_button(btn, pressed);
             if pressed {
@@ -186,19 +194,19 @@ impl GameBoyCore {
         }
     }
 
-    pub(crate) fn set_camera_image(&mut self, data: &[u8]) {
+    pub fn set_camera_image(&mut self, data: &[u8]) {
         self.memory.set_camera_image(data);
     }
 
-    pub(crate) fn is_camera_cartridge(&self) -> bool {
+    pub fn is_camera_cartridge(&self) -> bool {
         self.memory.get_mbc_type() == crate::memory::MbcType::PocketCamera
     }
 
-    pub(crate) fn is_camera_ready(&self) -> bool {
+    pub fn is_camera_ready(&self) -> bool {
         self.memory.is_camera_image_ready()
     }
 
-    pub(crate) fn update_camera_live(&mut self) -> bool {
+    pub fn update_camera_live(&mut self) -> bool {
         if !self.memory.is_camera_capture_dirty() {
             return false;
         }
@@ -233,22 +241,22 @@ impl GameBoyCore {
         true
     }
 
-    pub(crate) fn decode_camera_photo(&self, slot: u8) -> Vec<u8> {
+    pub fn decode_camera_photo(&self, slot: u8) -> Vec<u8> {
         self.memory.decode_camera_photo(slot)
     }
 
     #[cfg_attr(not(feature = "ios"), allow(dead_code))] // ios: gb_encode_camera_photo
-    pub(crate) fn encode_camera_photo(&mut self, slot: u8, rgba: &[u8]) -> bool {
+    pub fn encode_camera_photo(&mut self, slot: u8, rgba: &[u8]) -> bool {
         self.memory.encode_camera_photo(slot, rgba)
     }
 
     #[cfg_attr(not(feature = "ios"), allow(dead_code))] // ios: gb_clear_camera_photo_slot
-    pub(crate) fn clear_camera_photo_slot(&mut self, slot: u8) {
+    pub fn clear_camera_photo_slot(&mut self, slot: u8) {
         self.memory.clear_camera_photo_slot(slot)
     }
 
     #[cfg_attr(not(feature = "ios"), allow(dead_code))] // ios: gb_camera_photo_count
-    pub(crate) fn camera_photo_count(&self) -> u8 {
+    pub fn camera_photo_count(&self) -> u8 {
         self.memory.camera_photo_count()
     }
 }
