@@ -1,6 +1,6 @@
 # gb-emu
 
-Game Boy emulator core. Targets WebAssembly (via wasm-pack) and native platforms (via C FFI).
+A cycle accurate Game Boy and Game Boy Color emulator. Targets WebAssembly (via wasm-pack) and native platforms (via C FFI).
 
 ## Usage
 
