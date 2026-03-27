@@ -8,7 +8,7 @@ _.file = ".env"
 
 [tasks.build]
 description = "Build WASM package"
-run = "wasm-pack build --target web --features wasm --no-default-features --scope orkosinha"
+run = "wasm-pack build --scope orkosinha --target web --features wasm --no-default-features"
 
 [tasks.test]
 description = "Run tests"
