@@ -43,7 +43,9 @@ pub struct Channel1 {
 }
 
 impl Default for Channel1 {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Channel1 {
@@ -71,11 +73,21 @@ impl Channel1 {
 
     // ── Register access ──────────────────────────────────────────────────────
 
-    pub fn read_nr10(&self) -> u8 { self.nr10 | 0x80 }
-    pub fn read_nr11(&self) -> u8 { self.nr11 | 0x3F } // length bits write-only
-    pub fn read_nr12(&self) -> u8 { self.nr12 }
-    pub fn read_nr13(&self) -> u8 { 0xFF }              // freq LSB write-only
-    pub fn read_nr14(&self) -> u8 { self.nr14 | 0xBF } // trigger + freq MSB write-only
+    pub fn read_nr10(&self) -> u8 {
+        self.nr10 | 0x80
+    }
+    pub fn read_nr11(&self) -> u8 {
+        self.nr11 | 0x3F
+    } // length bits write-only
+    pub fn read_nr12(&self) -> u8 {
+        self.nr12
+    }
+    pub fn read_nr13(&self) -> u8 {
+        0xFF
+    } // freq LSB write-only
+    pub fn read_nr14(&self) -> u8 {
+        self.nr14 | 0xBF
+    } // trigger + freq MSB write-only
 
     pub fn write_nr10(&mut self, val: u8) {
         // If negate was used in sweep calc and direction changes, disable channel
@@ -109,7 +121,7 @@ impl Channel1 {
     pub fn write_nr14(&mut self, val: u8, frame_seq_step: u8) {
         let old_len_en = (self.nr14 & 0x40) != 0;
         let new_len_en = (val & 0x40) != 0;
-        let trigger    = (val & 0x80) != 0;
+        let trigger = (val & 0x80) != 0;
 
         self.nr14 = val & 0x7F;
 
@@ -268,11 +280,22 @@ impl Channel1 {
 
     /// Called when APU power is switched off — clears all registers.
     pub fn power_off(&mut self) {
-        self.nr10 = 0; self.nr11 = 0; self.nr12 = 0; self.nr13 = 0; self.nr14 = 0;
-        self.enabled = false; self.dac_enabled = false;
-        self.freq_timer = 0; self.duty_pos = 0; self.length_counter = 0;
-        self.env_volume = 0; self.env_timer = 0; self.env_running = false;
-        self.sweep_timer = 0; self.sweep_enabled = false; self.shadow_freq = 0;
+        self.nr10 = 0;
+        self.nr11 = 0;
+        self.nr12 = 0;
+        self.nr13 = 0;
+        self.nr14 = 0;
+        self.enabled = false;
+        self.dac_enabled = false;
+        self.freq_timer = 0;
+        self.duty_pos = 0;
+        self.length_counter = 0;
+        self.env_volume = 0;
+        self.env_timer = 0;
+        self.env_running = false;
+        self.sweep_timer = 0;
+        self.sweep_enabled = false;
+        self.shadow_freq = 0;
         self.sweep_negate_used = false;
     }
 }

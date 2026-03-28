@@ -99,8 +99,8 @@ pub fn make_cartridge(rom: Vec<u8>, cart_type: u8, ram_size: usize) -> Box<dyn C
         0x01..=0x03 => Box::new(Mbc1::new(rom, ram_size)),
         0x0F..=0x13 => Box::new(Mbc3::new(rom, ram_size)),
         0x19..=0x1E => Box::new(Mbc5::new(rom, ram_size)),
-        0x22        => Box::new(Mbc7::new(rom)),
-        0xFC        => Box::new(PocketCamera::new(rom)),
+        0x22 => Box::new(Mbc7::new(rom)),
+        0xFC => Box::new(PocketCamera::new(rom)),
         _ => Box::new(Mbc5::new(rom, ram_size)), // safe default for unknown types
     }
 }

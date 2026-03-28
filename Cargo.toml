@@ -7,7 +7,7 @@ repository = "https://github.com/orkosinha/gb-emu"
 license = "MIT"
 
 [lib]
-crate-type = ["cdylib", "staticlib"]
+crate-type = ["cdylib", "staticlib", "rlib"]
 
 [features]
 default = ["wasm"]

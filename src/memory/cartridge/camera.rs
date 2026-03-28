@@ -9,8 +9,8 @@
 
 use super::{Cartridge, MbcType};
 use crate::log::{LogCategory, RateLimiter};
-use crate::{log_info, log_info_limited};
 use crate::memory::camera::Camera;
+use crate::{log_info, log_info_limited};
 
 const ROM_BANK_SIZE: usize = 0x4000;
 const RAM_BANK_SIZE: usize = 0x2000;
@@ -63,7 +63,11 @@ impl Cartridge for PocketCamera {
                     "RAM bank: {} -> {} (mode={})",
                     self.ram_bank,
                     new_bank,
-                    if new_bank >= 0x10 { "CAMERA_REGS" } else { "SRAM" }
+                    if new_bank >= 0x10 {
+                        "CAMERA_REGS"
+                    } else {
+                        "SRAM"
+                    }
                 );
                 self.ram_bank = new_bank;
             }

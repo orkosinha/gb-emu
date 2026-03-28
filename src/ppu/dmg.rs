@@ -3,9 +3,9 @@
 //! All methods write RGBA directly to `self.buffer` and update
 //! `self.scanline_bg_info` for downstream sprite priority checks.
 
-use crate::memory::io;
-use crate::memory::Memory;
 use super::{Ppu, SCREEN_WIDTH};
+use crate::memory::Memory;
+use crate::memory::io;
 
 impl Ppu {
     pub(super) fn render_background_dmg(&mut self, memory: &Memory, line: usize) {

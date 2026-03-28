@@ -50,8 +50,7 @@ impl Cartridge for Mbc1 {
             // ROM bank number (lower 5 bits); 0 → 1
             0x2000..=0x3FFF => {
                 let bank = value & 0x1F;
-                self.rom_bank =
-                    (self.rom_bank & 0x60) | (if bank == 0 { 1 } else { bank }) as u16;
+                self.rom_bank = (self.rom_bank & 0x60) | (if bank == 0 { 1 } else { bank }) as u16;
             }
             // Upper 2 bits of ROM bank or RAM bank select
             0x4000..=0x5FFF => {

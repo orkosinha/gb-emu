@@ -31,7 +31,9 @@ pub struct Channel4 {
 }
 
 impl Default for Channel4 {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Channel4 {
@@ -54,10 +56,18 @@ impl Channel4 {
 
     // ── Register access ──────────────────────────────────────────────────────
 
-    pub fn read_nr41(&self) -> u8 { 0xFF }
-    pub fn read_nr42(&self) -> u8 { self.nr42 }
-    pub fn read_nr43(&self) -> u8 { self.nr43 }
-    pub fn read_nr44(&self) -> u8 { self.nr44 | 0xBF }
+    pub fn read_nr41(&self) -> u8 {
+        0xFF
+    }
+    pub fn read_nr42(&self) -> u8 {
+        self.nr42
+    }
+    pub fn read_nr43(&self) -> u8 {
+        self.nr43
+    }
+    pub fn read_nr44(&self) -> u8 {
+        self.nr44 | 0xBF
+    }
 
     pub fn write_nr41(&mut self, val: u8) {
         self.nr41 = val;
@@ -79,7 +89,7 @@ impl Channel4 {
     pub fn write_nr44(&mut self, val: u8, frame_seq_step: u8) {
         let old_len_en = (self.nr44 & 0x40) != 0;
         let new_len_en = (val & 0x40) != 0;
-        let trigger    = (val & 0x80) != 0;
+        let trigger = (val & 0x80) != 0;
 
         self.nr44 = val & 0x7F;
 
@@ -210,9 +220,17 @@ impl Channel4 {
     }
 
     pub fn power_off(&mut self) {
-        self.nr41 = 0; self.nr42 = 0; self.nr43 = 0; self.nr44 = 0;
-        self.enabled = false; self.dac_enabled = false;
-        self.lfsr = 0x7FFF; self.freq_timer = 0; self.length_counter = 0;
-        self.env_volume = 0; self.env_timer = 0; self.env_running = false;
+        self.nr41 = 0;
+        self.nr42 = 0;
+        self.nr43 = 0;
+        self.nr44 = 0;
+        self.enabled = false;
+        self.dac_enabled = false;
+        self.lfsr = 0x7FFF;
+        self.freq_timer = 0;
+        self.length_counter = 0;
+        self.env_volume = 0;
+        self.env_timer = 0;
+        self.env_running = false;
     }
 }

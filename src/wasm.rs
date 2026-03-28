@@ -73,7 +73,9 @@ impl GameBoy {
             );
         }
 
-        self.core.load_rom(rom_data, cgb_mode).map_err(JsValue::from_str)?;
+        self.core
+            .load_rom(rom_data, cgb_mode)
+            .map_err(JsValue::from_str)?;
 
         log_info!(
             LogCategory::General,
@@ -485,13 +487,19 @@ impl GameBoy {
 
     /// Colour of `color` (0–3) in BG `palette` (0–7) as 0xRRGGBB.
     pub fn get_bg_palette_color(&self, palette: u8, color: u8) -> u32 {
-        let (lo, hi) = self.core.memory.read_bg_palette(palette as usize, color as usize);
+        let (lo, hi) = self
+            .core
+            .memory
+            .read_bg_palette(palette as usize, color as usize);
         rgb555_to_rgb888(lo, hi)
     }
 
     /// Colour of `color` (0–3) in OBJ `palette` (0–7) as 0xRRGGBB.
     pub fn get_obj_palette_color(&self, palette: u8, color: u8) -> u32 {
-        let (lo, hi) = self.core.memory.read_obj_palette(palette as usize, color as usize);
+        let (lo, hi) = self
+            .core
+            .memory
+            .read_obj_palette(palette as usize, color as usize);
         rgb555_to_rgb888(lo, hi)
     }
 }
@@ -525,28 +533,66 @@ impl GameBoy {
 
     // ── APU control registers ────────────────────────────────────────────────
 
-    pub fn apu_powered(&self) -> bool  { self.core.apu.powered() }
-    pub fn apu_nr50(&self)    -> u8    { self.core.apu.nr50 }
-    pub fn apu_nr51(&self)    -> u8    { self.core.apu.nr51 }
-    pub fn apu_nr52(&self)    -> u8    { self.core.apu.read(0xFF26) }
+    pub fn apu_powered(&self) -> bool {
+        self.core.apu.powered()
+    }
+    pub fn apu_nr50(&self) -> u8 {
+        self.core.apu.nr50
+    }
+    pub fn apu_nr51(&self) -> u8 {
+        self.core.apu.nr51
+    }
+    pub fn apu_nr52(&self) -> u8 {
+        self.core.apu.read(0xFF26)
+    }
 
     // ── CH1 (Pulse + Sweep) ──────────────────────────────────────────────────
 
-    pub fn apu_ch1_enabled(&self)    -> bool  { self.core.apu.ch1.enabled }
-    pub fn apu_ch1_dac(&self)        -> bool  { self.core.apu.ch1.dac_enabled }
-    pub fn apu_ch1_volume(&self)     -> u8    { self.core.apu.ch1.env_volume }
-    pub fn apu_ch1_freq_reg(&self)   -> u16   { self.core.apu.ch1.frequency() }
-    pub fn apu_ch1_freq_hz(&self)    -> f32   { self.core.apu.ch1.freq_hz() }
-    pub fn apu_ch1_duty(&self)       -> u8    { self.core.apu.ch1.duty() }
-    pub fn apu_ch1_duty_pos(&self)   -> u8    { self.core.apu.ch1.duty_pos }
-    pub fn apu_ch1_length(&self)     -> u8    { self.core.apu.ch1.length_counter }
-    pub fn apu_ch1_len_en(&self)     -> bool  { (self.core.apu.ch1.nr14 & 0x40) != 0 }
-    pub fn apu_ch1_env_add(&self)    -> bool  { (self.core.apu.ch1.nr12 & 0x08) != 0 }
-    pub fn apu_ch1_env_period(&self) -> u8    { self.core.apu.ch1.nr12 & 0x07 }
-    pub fn apu_ch1_sweep_period(&self) -> u8  { (self.core.apu.ch1.nr10 >> 4) & 0x07 }
-    pub fn apu_ch1_sweep_shift(&self)  -> u8  { self.core.apu.ch1.nr10 & 0x07 }
-    pub fn apu_ch1_sweep_neg(&self)    -> bool { (self.core.apu.ch1.nr10 & 0x08) != 0 }
-    pub fn apu_ch1_shadow_freq(&self)  -> u16  { self.core.apu.ch1.shadow_freq }
+    pub fn apu_ch1_enabled(&self) -> bool {
+        self.core.apu.ch1.enabled
+    }
+    pub fn apu_ch1_dac(&self) -> bool {
+        self.core.apu.ch1.dac_enabled
+    }
+    pub fn apu_ch1_volume(&self) -> u8 {
+        self.core.apu.ch1.env_volume
+    }
+    pub fn apu_ch1_freq_reg(&self) -> u16 {
+        self.core.apu.ch1.frequency()
+    }
+    pub fn apu_ch1_freq_hz(&self) -> f32 {
+        self.core.apu.ch1.freq_hz()
+    }
+    pub fn apu_ch1_duty(&self) -> u8 {
+        self.core.apu.ch1.duty()
+    }
+    pub fn apu_ch1_duty_pos(&self) -> u8 {
+        self.core.apu.ch1.duty_pos
+    }
+    pub fn apu_ch1_length(&self) -> u8 {
+        self.core.apu.ch1.length_counter
+    }
+    pub fn apu_ch1_len_en(&self) -> bool {
+        (self.core.apu.ch1.nr14 & 0x40) != 0
+    }
+    pub fn apu_ch1_env_add(&self) -> bool {
+        (self.core.apu.ch1.nr12 & 0x08) != 0
+    }
+    pub fn apu_ch1_env_period(&self) -> u8 {
+        self.core.apu.ch1.nr12 & 0x07
+    }
+    pub fn apu_ch1_sweep_period(&self) -> u8 {
+        (self.core.apu.ch1.nr10 >> 4) & 0x07
+    }
+    pub fn apu_ch1_sweep_shift(&self) -> u8 {
+        self.core.apu.ch1.nr10 & 0x07
+    }
+    pub fn apu_ch1_sweep_neg(&self) -> bool {
+        (self.core.apu.ch1.nr10 & 0x08) != 0
+    }
+    pub fn apu_ch1_shadow_freq(&self) -> u16 {
+        self.core.apu.ch1.shadow_freq
+    }
     /// MIDI note number for CH1 frequency (255 = unknown/out of range).
     pub fn apu_ch1_midi_note(&self) -> u8 {
         crate::apu::freq_to_midi(self.core.apu.ch1.freq_hz())
@@ -554,57 +600,134 @@ impl GameBoy {
 
     // ── CH2 (Pulse) ──────────────────────────────────────────────────────────
 
-    pub fn apu_ch2_enabled(&self)    -> bool  { self.core.apu.ch2.enabled }
-    pub fn apu_ch2_dac(&self)        -> bool  { self.core.apu.ch2.dac_enabled }
-    pub fn apu_ch2_volume(&self)     -> u8    { self.core.apu.ch2.env_volume }
-    pub fn apu_ch2_freq_reg(&self)   -> u16   { self.core.apu.ch2.frequency() }
-    pub fn apu_ch2_freq_hz(&self)    -> f32   { self.core.apu.ch2.freq_hz() }
-    pub fn apu_ch2_duty(&self)       -> u8    { self.core.apu.ch2.duty() }
-    pub fn apu_ch2_duty_pos(&self)   -> u8    { self.core.apu.ch2.duty_pos }
-    pub fn apu_ch2_length(&self)     -> u8    { self.core.apu.ch2.length_counter }
-    pub fn apu_ch2_len_en(&self)     -> bool  { (self.core.apu.ch2.nr24 & 0x40) != 0 }
-    pub fn apu_ch2_env_add(&self)    -> bool  { (self.core.apu.ch2.nr22 & 0x08) != 0 }
-    pub fn apu_ch2_env_period(&self) -> u8    { self.core.apu.ch2.nr22 & 0x07 }
-    pub fn apu_ch2_midi_note(&self)  -> u8 {
+    pub fn apu_ch2_enabled(&self) -> bool {
+        self.core.apu.ch2.enabled
+    }
+    pub fn apu_ch2_dac(&self) -> bool {
+        self.core.apu.ch2.dac_enabled
+    }
+    pub fn apu_ch2_volume(&self) -> u8 {
+        self.core.apu.ch2.env_volume
+    }
+    pub fn apu_ch2_freq_reg(&self) -> u16 {
+        self.core.apu.ch2.frequency()
+    }
+    pub fn apu_ch2_freq_hz(&self) -> f32 {
+        self.core.apu.ch2.freq_hz()
+    }
+    pub fn apu_ch2_duty(&self) -> u8 {
+        self.core.apu.ch2.duty()
+    }
+    pub fn apu_ch2_duty_pos(&self) -> u8 {
+        self.core.apu.ch2.duty_pos
+    }
+    pub fn apu_ch2_length(&self) -> u8 {
+        self.core.apu.ch2.length_counter
+    }
+    pub fn apu_ch2_len_en(&self) -> bool {
+        (self.core.apu.ch2.nr24 & 0x40) != 0
+    }
+    pub fn apu_ch2_env_add(&self) -> bool {
+        (self.core.apu.ch2.nr22 & 0x08) != 0
+    }
+    pub fn apu_ch2_env_period(&self) -> u8 {
+        self.core.apu.ch2.nr22 & 0x07
+    }
+    pub fn apu_ch2_midi_note(&self) -> u8 {
         crate::apu::freq_to_midi(self.core.apu.ch2.freq_hz())
     }
 
     // ── CH3 (Wave) ───────────────────────────────────────────────────────────
 
-    pub fn apu_ch3_enabled(&self)    -> bool  { self.core.apu.ch3.enabled }
-    pub fn apu_ch3_dac(&self)        -> bool  { self.core.apu.ch3.dac_enabled }
-    pub fn apu_ch3_vol_code(&self)   -> u8    { self.core.apu.ch3.volume_code() }
-    pub fn apu_ch3_freq_reg(&self)   -> u16   { self.core.apu.ch3.frequency() }
-    pub fn apu_ch3_freq_hz(&self)    -> f32   { self.core.apu.ch3.freq_hz() }
-    pub fn apu_ch3_wave_pos(&self)   -> u8    { self.core.apu.ch3.wave_pos }
-    pub fn apu_ch3_length(&self)     -> u16   { self.core.apu.ch3.length_counter }
-    pub fn apu_ch3_len_en(&self)     -> bool  { (self.core.apu.ch3.nr34 & 0x40) != 0 }
+    pub fn apu_ch3_enabled(&self) -> bool {
+        self.core.apu.ch3.enabled
+    }
+    pub fn apu_ch3_dac(&self) -> bool {
+        self.core.apu.ch3.dac_enabled
+    }
+    pub fn apu_ch3_vol_code(&self) -> u8 {
+        self.core.apu.ch3.volume_code()
+    }
+    pub fn apu_ch3_freq_reg(&self) -> u16 {
+        self.core.apu.ch3.frequency()
+    }
+    pub fn apu_ch3_freq_hz(&self) -> f32 {
+        self.core.apu.ch3.freq_hz()
+    }
+    pub fn apu_ch3_wave_pos(&self) -> u8 {
+        self.core.apu.ch3.wave_pos
+    }
+    pub fn apu_ch3_length(&self) -> u16 {
+        self.core.apu.ch3.length_counter
+    }
+    pub fn apu_ch3_len_en(&self) -> bool {
+        (self.core.apu.ch3.nr34 & 0x40) != 0
+    }
     /// Raw wave RAM as 16 bytes (32 × 4-bit nibbles).
-    pub fn apu_ch3_wave_ram(&self) -> Vec<u8> { self.core.apu.ch3.wave_ram.to_vec() }
+    pub fn apu_ch3_wave_ram(&self) -> Vec<u8> {
+        self.core.apu.ch3.wave_ram.to_vec()
+    }
     pub fn apu_ch3_midi_note(&self) -> u8 {
         crate::apu::freq_to_midi(self.core.apu.ch3.freq_hz())
     }
 
     // ── CH4 (Noise) ──────────────────────────────────────────────────────────
 
-    pub fn apu_ch4_enabled(&self)    -> bool  { self.core.apu.ch4.enabled }
-    pub fn apu_ch4_dac(&self)        -> bool  { self.core.apu.ch4.dac_enabled }
-    pub fn apu_ch4_volume(&self)     -> u8    { self.core.apu.ch4.env_volume }
-    pub fn apu_ch4_freq_hz(&self)    -> f32   { self.core.apu.ch4.freq_hz() }
-    pub fn apu_ch4_clock_shift(&self) -> u8   { self.core.apu.ch4.clock_shift() }
-    pub fn apu_ch4_clock_div(&self)   -> u8   { self.core.apu.ch4.clock_divider() }
-    pub fn apu_ch4_lfsr_short(&self)  -> bool { self.core.apu.ch4.is_short_lfsr() }
-    pub fn apu_ch4_lfsr(&self)        -> u16  { self.core.apu.ch4.lfsr }
-    pub fn apu_ch4_length(&self)      -> u8   { self.core.apu.ch4.length_counter }
-    pub fn apu_ch4_len_en(&self)      -> bool { (self.core.apu.ch4.nr44 & 0x40) != 0 }
-    pub fn apu_ch4_env_add(&self)     -> bool { (self.core.apu.ch4.nr42 & 0x08) != 0 }
-    pub fn apu_ch4_env_period(&self)  -> u8   { self.core.apu.ch4.nr42 & 0x07 }
+    pub fn apu_ch4_enabled(&self) -> bool {
+        self.core.apu.ch4.enabled
+    }
+    pub fn apu_ch4_dac(&self) -> bool {
+        self.core.apu.ch4.dac_enabled
+    }
+    pub fn apu_ch4_volume(&self) -> u8 {
+        self.core.apu.ch4.env_volume
+    }
+    pub fn apu_ch4_freq_hz(&self) -> f32 {
+        self.core.apu.ch4.freq_hz()
+    }
+    pub fn apu_ch4_clock_shift(&self) -> u8 {
+        self.core.apu.ch4.clock_shift()
+    }
+    pub fn apu_ch4_clock_div(&self) -> u8 {
+        self.core.apu.ch4.clock_divider()
+    }
+    pub fn apu_ch4_lfsr_short(&self) -> bool {
+        self.core.apu.ch4.is_short_lfsr()
+    }
+    pub fn apu_ch4_lfsr(&self) -> u16 {
+        self.core.apu.ch4.lfsr
+    }
+    pub fn apu_ch4_length(&self) -> u8 {
+        self.core.apu.ch4.length_counter
+    }
+    pub fn apu_ch4_len_en(&self) -> bool {
+        (self.core.apu.ch4.nr44 & 0x40) != 0
+    }
+    pub fn apu_ch4_env_add(&self) -> bool {
+        (self.core.apu.ch4.nr42 & 0x08) != 0
+    }
+    pub fn apu_ch4_env_period(&self) -> u8 {
+        self.core.apu.ch4.nr42 & 0x07
+    }
 
     // ── Frame sequencer / note name ──────────────────────────────────────────
 
     /// Current frame sequencer step (0–7).  Drives length/sweep/envelope clocks.
     pub fn apu_frame_seq_step(&self) -> u8 {
         self.core.apu.debug_state().frame_seq_step
+    }
+
+    /// Pointer to the per-channel visualization ring buffer.
+    /// Layout: 4 channels × 512 bytes. Channel c occupies byte offset c × 512.
+    /// Each byte is the raw 4-bit output (0–15) captured once per audio sample.
+    pub fn apu_viz_ptr(&self) -> *const u8 {
+        self.core.apu.viz_buf.as_ptr()
+    }
+
+    /// Current write index within each channel's 512-byte slot (0–511).
+    /// The most-recently written sample is at (viz_wp + 511) % 512.
+    pub fn apu_viz_wp(&self) -> usize {
+        self.core.apu.viz_wp
     }
 
     /// Convert a MIDI note number (0–127) to a note name string like "C-4" or "A#3".

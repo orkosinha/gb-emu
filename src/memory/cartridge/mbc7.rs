@@ -61,11 +61,21 @@ enum EepromState {
     /// Collecting start bit + 2-bit opcode + 7-bit address (= 10 bits).
     Receiving,
     /// Shifting a 16-bit word out to the master. `word` is the value; `sent` = bits output so far.
-    Reading { word: u16, sent: u8 },
+    Reading {
+        word: u16,
+        sent: u8,
+    },
     /// Collecting 16-bit write data for a single address.
-    Writing { addr: u8, data: u16, received: u8 },
+    Writing {
+        addr: u8,
+        data: u16,
+        received: u8,
+    },
     /// Collecting 16-bit write data for WRAL (write-all).
-    WritingAll { data: u16, received: u8 },
+    WritingAll {
+        data: u16,
+        received: u8,
+    },
 }
 
 impl Eeprom93lc56 {
@@ -85,37 +95,37 @@ impl Eeprom93lc56 {
 
     /// Read the register byte (reconstructed from current pin state).
     pub fn read(&self) -> u8 {
-        let cs  = if self.cs     { 0x80 } else { 0 };
-        let clk = if self.clk    { 0x40 } else { 0 };
-        let di  = if self.di     { 0x02 } else { 0 };
+        let cs = if self.cs { 0x80 } else { 0 };
+        let clk = if self.clk { 0x40 } else { 0 };
+        let di = if self.di { 0x02 } else { 0 };
         let do_ = if self.do_bit { 0x01 } else { 0 };
         cs | clk | di | do_
     }
 
     /// Write the register byte (updates CS/CLK/DI and advances state machine).
     pub fn write(&mut self, value: u8) {
-        let new_cs  = value & 0x80 != 0;
+        let new_cs = value & 0x80 != 0;
         let new_clk = value & 0x40 != 0;
-        let di      = value & 0x02 != 0;
+        let di = value & 0x02 != 0;
         self.di = di;
 
         // CS falling edge → reset
         if self.cs && !new_cs {
-            self.state    = EepromState::Idle;
-            self.in_bits  = 0;
+            self.state = EepromState::Idle;
+            self.in_bits = 0;
             self.in_count = 0;
-            self.do_bit   = true;
+            self.do_bit = true;
         }
 
         // CS rising edge → begin transaction
         if !self.cs && new_cs {
-            self.state    = EepromState::Receiving;
-            self.in_bits  = 0;
+            self.state = EepromState::Receiving;
+            self.in_bits = 0;
             self.in_count = 0;
         }
 
         let rising = new_cs && !self.clk && new_clk;
-        self.cs  = new_cs;
+        self.cs = new_cs;
         self.clk = new_clk;
 
         if !rising {
@@ -132,7 +142,7 @@ impl Eeprom93lc56 {
                     return;
                 }
 
-                self.in_bits   = (self.in_bits << 1) | (di as u32);
+                self.in_bits = (self.in_bits << 1) | (di as u32);
                 self.in_count += 1;
 
                 if self.in_count < 10 {
@@ -141,21 +151,25 @@ impl Eeprom93lc56 {
 
                 // The first bit counted is always 1 (start bit), so no extra check needed.
 
-                let op   = ((self.in_bits >> 7) & 0x3) as u8;
+                let op = ((self.in_bits >> 7) & 0x3) as u8;
                 let addr = (self.in_bits & 0x7F) as u8;
-                self.in_bits  = 0;
+                self.in_bits = 0;
                 self.in_count = 0;
 
                 match op {
                     0b10 => {
                         // READ — shift out 16-bit word (dummy 0 bit, then MSB first)
                         let word = self.read_word(addr & 0x7F);
-                        self.state   = EepromState::Reading { word, sent: 0 };
-                        self.do_bit  = false; // dummy zero before data
+                        self.state = EepromState::Reading { word, sent: 0 };
+                        self.do_bit = false; // dummy zero before data
                     }
                     0b01 => {
                         // WRITE — collect 16 more bits, then store
-                        self.state = EepromState::Writing { addr: addr & 0x7F, data: 0, received: 0 };
+                        self.state = EepromState::Writing {
+                            addr: addr & 0x7F,
+                            data: 0,
+                            received: 0,
+                        };
                     }
                     0b11 => {
                         // ERASE — clear single word
@@ -163,13 +177,13 @@ impl Eeprom93lc56 {
                             self.write_word(addr & 0x7F, 0xFFFF);
                         }
                         self.do_bit = true; // write-complete indicator
-                        self.state  = EepromState::Idle;
+                        self.state = EepromState::Idle;
                     }
                     0b00 => {
                         // Special commands decoded by upper 2 bits of address
                         match (addr >> 5) & 0x3 {
-                            0b11 => self.write_enabled = true,   // WREN
-                            0b00 => self.write_enabled = false,  // EWDS
+                            0b11 => self.write_enabled = true,  // WREN
+                            0b00 => self.write_enabled = false, // EWDS
                             0b10 => {
                                 // ERAL — erase all words
                                 if self.write_enabled {
@@ -178,12 +192,15 @@ impl Eeprom93lc56 {
                             }
                             _ => {
                                 // WRAL — write all: collect 16-bit data
-                                self.state = EepromState::WritingAll { data: 0, received: 0 };
+                                self.state = EepromState::WritingAll {
+                                    data: 0,
+                                    received: 0,
+                                };
                                 return;
                             }
                         }
                         self.do_bit = true;
-                        self.state  = EepromState::Idle;
+                        self.state = EepromState::Idle;
                     }
                     _ => unreachable!(),
                 }
@@ -193,30 +210,44 @@ impl Eeprom93lc56 {
                 // Dummy bit already output on entry; shift data MSB-first.
                 if sent < 16 {
                     self.do_bit = (word >> (15 - sent)) & 1 != 0;
-                    self.state  = EepromState::Reading { word, sent: sent + 1 };
+                    self.state = EepromState::Reading {
+                        word,
+                        sent: sent + 1,
+                    };
                 } else {
                     self.do_bit = true;
-                    self.state  = EepromState::Idle;
+                    self.state = EepromState::Idle;
                 }
             }
 
-            EepromState::Writing { addr, data, received } => {
+            EepromState::Writing {
+                addr,
+                data,
+                received,
+            } => {
                 let data = (data << 1) | (di as u16);
                 if received + 1 < 16 {
-                    self.state = EepromState::Writing { addr, data, received: received + 1 };
+                    self.state = EepromState::Writing {
+                        addr,
+                        data,
+                        received: received + 1,
+                    };
                 } else {
                     if self.write_enabled {
                         self.write_word(addr, data);
                     }
                     self.do_bit = true;
-                    self.state  = EepromState::Idle;
+                    self.state = EepromState::Idle;
                 }
             }
 
             EepromState::WritingAll { data, received } => {
                 let data = (data << 1) | (di as u16);
                 if received + 1 < 16 {
-                    self.state = EepromState::WritingAll { data, received: received + 1 };
+                    self.state = EepromState::WritingAll {
+                        data,
+                        received: received + 1,
+                    };
                 } else {
                     if self.write_enabled {
                         for i in 0..128 {
@@ -224,7 +255,7 @@ impl Eeprom93lc56 {
                         }
                     }
                     self.do_bit = true;
-                    self.state  = EepromState::Idle;
+                    self.state = EepromState::Idle;
                 }
             }
         }
@@ -240,7 +271,7 @@ impl Eeprom93lc56 {
     fn write_word(&mut self, addr: u8, val: u16) {
         let i = (addr as usize) * 2;
         let bytes = val.to_le_bytes();
-        self.data[i]     = bytes[0];
+        self.data[i] = bytes[0];
         self.data[i + 1] = bytes[1];
     }
 
@@ -266,9 +297,9 @@ pub struct Mbc7 {
     ram_gate2: bool,
 
     // Accelerometer (ADXL202E)
-    accel_x: u16,          // current host value; center ≈ 0x81D0
+    accel_x: u16, // current host value; center ≈ 0x81D0
     accel_y: u16,
-    accel_x_latched: u16,  // snapshot taken on the 0x55/0xAA write sequence
+    accel_x_latched: u16, // snapshot taken on the 0x55/0xAA write sequence
     accel_y_latched: u16,
     latch_step: LatchStep,
 
@@ -321,7 +352,7 @@ impl Cartridge for Mbc7 {
         match addr {
             0x0000..=0x3FFF => self.rom.get(addr as usize).copied().unwrap_or(0xFF),
             0x4000..=0x7FFF => {
-                let bank   = self.rom_bank as usize;
+                let bank = self.rom_bank as usize;
                 let offset = bank * ROM_BANK_SIZE + (addr as usize - 0x4000);
                 self.rom.get(offset).copied().unwrap_or(0xFF)
             }
@@ -351,9 +382,9 @@ impl Cartridge for Mbc7 {
             0x3 => (self.accel_x_latched >> 8) as u8,
             0x4 => (self.accel_y_latched & 0xFF) as u8,
             0x5 => (self.accel_y_latched >> 8) as u8,
-            0x6 => 0x00, // Z-axis LSB (always 0)
-            0x7 => 0xFF, // Z-axis MSB (always 0xFF)
-            _   => self.eeprom.read(), // reg 8-15 → EEPROM
+            0x6 => 0x00,             // Z-axis LSB (always 0)
+            0x7 => 0xFF,             // Z-axis MSB (always 0xFF)
+            _ => self.eeprom.read(), // reg 8-15 → EEPROM
         }
     }
 

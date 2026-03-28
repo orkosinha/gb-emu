@@ -15,8 +15,8 @@ pub struct Channel3 {
     pub dac_enabled: bool,
 
     pub freq_timer: u32,
-    pub wave_pos: u8,     // 0–31 into wave RAM nibbles
-    sample_buffer: u8,    // latched nibble (resampled once per timer tick)
+    pub wave_pos: u8,  // 0–31 into wave RAM nibbles
+    sample_buffer: u8, // latched nibble (resampled once per timer tick)
 
     pub length_counter: u16, // 256 counts for CH3 (not 64)
 
@@ -25,7 +25,9 @@ pub struct Channel3 {
 }
 
 impl Default for Channel3 {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Channel3 {
@@ -49,11 +51,21 @@ impl Channel3 {
 
     // ── Register access ──────────────────────────────────────────────────────
 
-    pub fn read_nr30(&self) -> u8 { self.nr30 | 0x7F }
-    pub fn read_nr31(&self) -> u8 { 0xFF }           // length write-only
-    pub fn read_nr32(&self) -> u8 { self.nr32 | 0x9F }
-    pub fn read_nr33(&self) -> u8 { 0xFF }           // freq LSB write-only
-    pub fn read_nr34(&self) -> u8 { self.nr34 | 0xBF }
+    pub fn read_nr30(&self) -> u8 {
+        self.nr30 | 0x7F
+    }
+    pub fn read_nr31(&self) -> u8 {
+        0xFF
+    } // length write-only
+    pub fn read_nr32(&self) -> u8 {
+        self.nr32 | 0x9F
+    }
+    pub fn read_nr33(&self) -> u8 {
+        0xFF
+    } // freq LSB write-only
+    pub fn read_nr34(&self) -> u8 {
+        self.nr34 | 0xBF
+    }
 
     /// Wave RAM reads: when channel is active the last latched byte is returned
     /// (hardware read-back quirk); for simplicity we return the raw byte.
@@ -89,7 +101,7 @@ impl Channel3 {
     pub fn write_nr34(&mut self, val: u8, frame_seq_step: u8) {
         let old_len_en = (self.nr34 & 0x40) != 0;
         let new_len_en = (val & 0x40) != 0;
-        let trigger    = (val & 0x80) != 0;
+        let trigger = (val & 0x80) != 0;
 
         self.nr34 = val & 0x7F;
 
@@ -147,10 +159,10 @@ impl Channel3 {
         }
         // Apply volume shift
         let shift = match (self.nr32 >> 5) & 0x03 {
-            0 => return 0,  // mute
-            1 => 0,         // 100% (no shift)
-            2 => 1,         // 50%
-            3 => 2,         // 25%
+            0 => return 0, // mute
+            1 => 0,        // 100% (no shift)
+            2 => 1,        // 50%
+            3 => 2,        // 25%
             _ => unreachable!(),
         };
         self.sample_buffer >> shift
@@ -184,9 +196,16 @@ impl Channel3 {
     }
 
     pub fn power_off(&mut self) {
-        self.nr30 = 0; self.nr31 = 0; self.nr32 = 0; self.nr33 = 0; self.nr34 = 0;
-        self.enabled = false; self.dac_enabled = false;
-        self.freq_timer = 0; self.wave_pos = 0; self.sample_buffer = 0;
+        self.nr30 = 0;
+        self.nr31 = 0;
+        self.nr32 = 0;
+        self.nr33 = 0;
+        self.nr34 = 0;
+        self.enabled = false;
+        self.dac_enabled = false;
+        self.freq_timer = 0;
+        self.wave_pos = 0;
+        self.sample_buffer = 0;
         self.length_counter = 0;
         // Wave RAM is NOT cleared on power-off
     }

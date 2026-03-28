@@ -75,7 +75,10 @@ impl Cgb {
     #[inline]
     pub fn read_obj_palette(&self, palette: usize, color: usize) -> (u8, u8) {
         let offset = palette * 8 + color * 2;
-        (self.obj_palette_ram[offset], self.obj_palette_ram[offset + 1])
+        (
+            self.obj_palette_ram[offset],
+            self.obj_palette_ram[offset + 1],
+        )
     }
 
     /// Toggle double-speed mode (invoked by the STOP opcode when KEY1 bit 0 is set).

@@ -359,7 +359,12 @@ mod tests {
 
     impl TestContext {
         fn step(&mut self) -> u32 {
-            let mut bus = MemoryBus::new(&mut self.memory, &mut self.timer, &mut self.joypad, &mut self.apu);
+            let mut bus = MemoryBus::new(
+                &mut self.memory,
+                &mut self.timer,
+                &mut self.joypad,
+                &mut self.apu,
+            );
             self.cpu.step(&mut bus, &mut self.ic)
         }
     }
@@ -637,7 +642,12 @@ mod tests {
 
         ctx.step(); // LD (HL), 0x42
         // Read from WRAM at 0xC000
-        let bus = MemoryBus::new(&mut ctx.memory, &mut ctx.timer, &mut ctx.joypad, &mut ctx.apu);
+        let bus = MemoryBus::new(
+            &mut ctx.memory,
+            &mut ctx.timer,
+            &mut ctx.joypad,
+            &mut ctx.apu,
+        );
         assert_eq!(bus.read(0xC000), 0x42);
     }
 
@@ -661,7 +671,10 @@ mod tests {
     fn test_reset_cgb_registers() {
         let mut cpu = Cpu::new();
         cpu.reset(true);
-        assert_eq!(cpu.a, 0x11, "A (GBC) — hardware ID checked by games at 0x0100");
+        assert_eq!(
+            cpu.a, 0x11,
+            "A (GBC) — hardware ID checked by games at 0x0100"
+        );
         assert_eq!(cpu.f, 0x80, "F (GBC)");
         assert_eq!(cpu.b, 0x00, "B (GBC)");
         assert_eq!(cpu.c, 0x00, "C (GBC)");
@@ -695,8 +708,14 @@ mod tests {
 
         ctx.step(); // STOP → reads via bus.read(0xFF4D) → sees speed_armed=1
 
-        assert!(!ctx.cpu.halted, "CPU must not halt when speed switch is triggered");
-        assert!(ctx.memory.is_double_speed(), "double speed should be active");
+        assert!(
+            !ctx.cpu.halted,
+            "CPU must not halt when speed switch is triggered"
+        );
+        assert!(
+            ctx.memory.is_double_speed(),
+            "double speed should be active"
+        );
     }
 
     #[test]

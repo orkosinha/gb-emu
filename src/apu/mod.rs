@@ -41,6 +41,9 @@ const CPU_CLOCK: f64 = 4_194_304.0;
 /// T-cycles per output sample (fractional).
 const CYCLES_PER_SAMPLE: f64 = CPU_CLOCK / SAMPLE_RATE as f64;
 
+/// Number of audio-rate samples stored per channel in the visualization buffer.
+const VIZ_SIZE: usize = 512;
+
 // ── Debug state ─────────────────────────────────────────────────────────────
 
 /// Per-channel debug snapshot — enough data to render a LSDJ-style tracker UI.
@@ -48,8 +51,8 @@ const CYCLES_PER_SAMPLE: f64 = CPU_CLOCK / SAMPLE_RATE as f64;
 pub struct ChannelDebug {
     pub enabled: bool,
     pub dac_on: bool,
-    pub volume: u8,       // 0–15
-    pub freq_reg: u16,    // raw 11-bit freq register (CH1/2/3)
+    pub volume: u8,    // 0–15
+    pub freq_reg: u16, // raw 11-bit freq register (CH1/2/3)
     pub freq_hz: f32,
     /// Duty cycle index 0–3 (CH1/2), volume code 0–3 (CH3), 0 for CH4.
     pub duty_or_vol: u8,
@@ -123,10 +126,19 @@ pub struct Apu {
 
     /// Output sample buffer: interleaved (L, R) f32 pairs.
     pub sample_buf: Vec<f32>,
+
+    /// Per-channel visualization circular buffer.
+    /// Layout: 4 × VIZ_SIZE bytes — channel c occupies [c*VIZ_SIZE .. (c+1)*VIZ_SIZE].
+    /// Each byte is the raw 4-bit DAC output (0–15) captured once per audio sample.
+    pub viz_buf: Vec<u8>,
+    /// Write index into each channel's VIZ_SIZE slot (0..VIZ_SIZE).
+    pub viz_wp: usize,
 }
 
 impl Default for Apu {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Apu {
@@ -145,6 +157,8 @@ impl Apu {
             hpf_cap_l: 0.0,
             hpf_cap_r: 0.0,
             sample_buf: Vec::with_capacity(1024),
+            viz_buf: vec![0u8; 4 * VIZ_SIZE],
+            viz_wp: 0,
         }
     }
 
@@ -271,11 +285,19 @@ impl Apu {
 
     fn read_nr52(&self) -> u8 {
         let mut v = self.nr52 & 0x80; // preserve power bit
-        v |= 0x70;                     // unused bits read as 1
-        if self.ch1.enabled { v |= 0x01; }
-        if self.ch2.enabled { v |= 0x02; }
-        if self.ch3.enabled { v |= 0x04; }
-        if self.ch4.enabled { v |= 0x08; }
+        v |= 0x70; // unused bits read as 1
+        if self.ch1.enabled {
+            v |= 0x01;
+        }
+        if self.ch2.enabled {
+            v |= 0x02;
+        }
+        if self.ch3.enabled {
+            v |= 0x04;
+        }
+        if self.ch4.enabled {
+            v |= 0x08;
+        }
         v
     }
 
@@ -347,13 +369,17 @@ impl Apu {
 
         let channels = [c1 as f32, c2 as f32, c3 as f32, c4 as f32];
         for (i, &ch) in channels.iter().enumerate() {
-            if self.nr51 & (1 << (i + 4)) != 0 { l += ch; }
-            if self.nr51 & (1 << i)       != 0 { r += ch; }
+            if self.nr51 & (1 << (i + 4)) != 0 {
+                l += ch;
+            }
+            if self.nr51 & (1 << i) != 0 {
+                r += ch;
+            }
         }
 
         // NR50 master volume: bits 6-4 = left (0-7), bits 2-0 = right (0-7)
         let vol_l = ((self.nr50 >> 4) & 0x07) as f32 + 1.0; // 1–8
-        let vol_r = (self.nr50 & 0x07) as f32 + 1.0;         // 1–8
+        let vol_r = (self.nr50 & 0x07) as f32 + 1.0; // 1–8
 
         // Normalise: max possible sum is 4 channels * 15 amplitude * 8 volume = 480
         // We target ±1.0 peak, so divide by 60 * 8 = 480
@@ -371,6 +397,14 @@ impl Apu {
 
         self.sample_buf.push(out_l);
         self.sample_buf.push(out_r);
+
+        // Capture raw per-channel output into the visualization ring buffer.
+        let vp = self.viz_wp;
+        self.viz_buf[vp] = c1;
+        self.viz_buf[VIZ_SIZE + vp] = c2;
+        self.viz_buf[2 * VIZ_SIZE + vp] = c3;
+        self.viz_buf[3 * VIZ_SIZE + vp] = c4;
+        self.viz_wp = (vp + 1) % VIZ_SIZE;
     }
 
     /// Drain the sample buffer — call once per frame after step_frame().
@@ -505,17 +539,16 @@ pub fn freq_to_midi(hz: f32) -> u8 {
 /// Returns "---" for note 255 (unknown).
 pub fn midi_to_note_name(note: u8) -> &'static str {
     const NAMES: [&str; 128] = [
-        "C-0", "C#0", "D-0", "D#0", "E-0", "F-0", "F#0", "G-0", "G#0", "A-0", "A#0", "B-0",
-        "C-1", "C#1", "D-1", "D#1", "E-1", "F-1", "F#1", "G-1", "G#1", "A-1", "A#1", "B-1",
-        "C-2", "C#2", "D-2", "D#2", "E-2", "F-2", "F#2", "G-2", "G#2", "A-2", "A#2", "B-2",
-        "C-3", "C#3", "D-3", "D#3", "E-3", "F-3", "F#3", "G-3", "G#3", "A-3", "A#3", "B-3",
-        "C-4", "C#4", "D-4", "D#4", "E-4", "F-4", "F#4", "G-4", "G#4", "A-4", "A#4", "B-4",
-        "C-5", "C#5", "D-5", "D#5", "E-5", "F-5", "F#5", "G-5", "G#5", "A-5", "A#5", "B-5",
-        "C-6", "C#6", "D-6", "D#6", "E-6", "F-6", "F#6", "G-6", "G#6", "A-6", "A#6", "B-6",
-        "C-7", "C#7", "D-7", "D#7", "E-7", "F-7", "F#7", "G-7", "G#7", "A-7", "A#7", "B-7",
-        "C-8", "C#8", "D-8", "D#8", "E-8", "F-8", "F#8", "G-8", "G#8", "A-8", "A#8", "B-8",
-        "C-9", "C#9", "D-9", "D#9", "E-9", "F-9", "F#9", "G-9", "G#9", "A-9", "A#9", "B-9",
-        "C-A", "C#A", "D-A", "D#A", "E-A", "F-A", "F#A", "G-A",
+        "C-0", "C#0", "D-0", "D#0", "E-0", "F-0", "F#0", "G-0", "G#0", "A-0", "A#0", "B-0", "C-1",
+        "C#1", "D-1", "D#1", "E-1", "F-1", "F#1", "G-1", "G#1", "A-1", "A#1", "B-1", "C-2", "C#2",
+        "D-2", "D#2", "E-2", "F-2", "F#2", "G-2", "G#2", "A-2", "A#2", "B-2", "C-3", "C#3", "D-3",
+        "D#3", "E-3", "F-3", "F#3", "G-3", "G#3", "A-3", "A#3", "B-3", "C-4", "C#4", "D-4", "D#4",
+        "E-4", "F-4", "F#4", "G-4", "G#4", "A-4", "A#4", "B-4", "C-5", "C#5", "D-5", "D#5", "E-5",
+        "F-5", "F#5", "G-5", "G#5", "A-5", "A#5", "B-5", "C-6", "C#6", "D-6", "D#6", "E-6", "F-6",
+        "F#6", "G-6", "G#6", "A-6", "A#6", "B-6", "C-7", "C#7", "D-7", "D#7", "E-7", "F-7", "F#7",
+        "G-7", "G#7", "A-7", "A#7", "B-7", "C-8", "C#8", "D-8", "D#8", "E-8", "F-8", "F#8", "G-8",
+        "G#8", "A-8", "A#8", "B-8", "C-9", "C#9", "D-9", "D#9", "E-9", "F-9", "F#9", "G-9", "G#9",
+        "A-9", "A#9", "B-9", "C-A", "C#A", "D-A", "D#A", "E-A", "F-A", "F#A", "G-A",
     ];
     if note as usize >= NAMES.len() {
         return "---";

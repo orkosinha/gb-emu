@@ -45,7 +45,12 @@ pub extern "C" fn gb_destroy(handle: *mut c_void) {
 /// Pass cgb_mode=false for standard DMG mode (existing behaviour).
 /// Returns true on success, false on failure.
 #[unsafe(no_mangle)]
-pub extern "C" fn gb_load_rom(handle: *mut c_void, data: *const u8, len: usize, cgb_mode: bool) -> bool {
+pub extern "C" fn gb_load_rom(
+    handle: *mut c_void,
+    data: *const u8,
+    len: usize,
+    cgb_mode: bool,
+) -> bool {
     if handle.is_null() || data.is_null() || len == 0 {
         return false;
     }
@@ -321,7 +326,9 @@ pub extern "C" fn gb_set_camera_exposure(handle: *mut c_void, exposure: i32) {
         if exposure < 0 {
             gb.core.memory.set_camera_exposure_override(None);
         } else {
-            gb.core.memory.set_camera_exposure_override(Some(exposure as u16));
+            gb.core
+                .memory
+                .set_camera_exposure_override(Some(exposure as u16));
         }
     }
 }
@@ -473,63 +480,87 @@ pub extern "C" fn gb_apu_powered(handle: *const c_void) -> bool {
 /// CH1 frequency register value (0–2047).
 #[unsafe(no_mangle)]
 pub extern "C" fn gb_apu_ch1_freq_reg(handle: *const c_void) -> u16 {
-    if handle.is_null() { return 0; }
+    if handle.is_null() {
+        return 0;
+    }
     unsafe { (*(handle as *const GameBoyHandle)).core.apu.ch1.frequency() }
 }
 
 /// CH1 envelope volume (0–15).
 #[unsafe(no_mangle)]
 pub extern "C" fn gb_apu_ch1_volume(handle: *const c_void) -> u8 {
-    if handle.is_null() { return 0; }
+    if handle.is_null() {
+        return 0;
+    }
     unsafe { (*(handle as *const GameBoyHandle)).core.apu.ch1.env_volume }
 }
 
 /// CH1 enabled flag.
 #[unsafe(no_mangle)]
 pub extern "C" fn gb_apu_ch1_enabled(handle: *const c_void) -> bool {
-    if handle.is_null() { return false; }
+    if handle.is_null() {
+        return false;
+    }
     unsafe { (*(handle as *const GameBoyHandle)).core.apu.ch1.enabled }
 }
 
 /// CH2 frequency register value (0–2047).
 #[unsafe(no_mangle)]
 pub extern "C" fn gb_apu_ch2_freq_reg(handle: *const c_void) -> u16 {
-    if handle.is_null() { return 0; }
+    if handle.is_null() {
+        return 0;
+    }
     unsafe { (*(handle as *const GameBoyHandle)).core.apu.ch2.frequency() }
 }
 
 /// CH2 envelope volume (0–15).
 #[unsafe(no_mangle)]
 pub extern "C" fn gb_apu_ch2_volume(handle: *const c_void) -> u8 {
-    if handle.is_null() { return 0; }
+    if handle.is_null() {
+        return 0;
+    }
     unsafe { (*(handle as *const GameBoyHandle)).core.apu.ch2.env_volume }
 }
 
 /// CH2 enabled flag.
 #[unsafe(no_mangle)]
 pub extern "C" fn gb_apu_ch2_enabled(handle: *const c_void) -> bool {
-    if handle.is_null() { return false; }
+    if handle.is_null() {
+        return false;
+    }
     unsafe { (*(handle as *const GameBoyHandle)).core.apu.ch2.enabled }
 }
 
 /// CH3 frequency register value (0–2047).
 #[unsafe(no_mangle)]
 pub extern "C" fn gb_apu_ch3_freq_reg(handle: *const c_void) -> u16 {
-    if handle.is_null() { return 0; }
+    if handle.is_null() {
+        return 0;
+    }
     unsafe { (*(handle as *const GameBoyHandle)).core.apu.ch3.frequency() }
 }
 
 /// CH3 volume code (0=mute, 1=100%, 2=50%, 3=25%).
 #[unsafe(no_mangle)]
 pub extern "C" fn gb_apu_ch3_vol_code(handle: *const c_void) -> u8 {
-    if handle.is_null() { return 0; }
-    unsafe { (*(handle as *const GameBoyHandle)).core.apu.ch3.volume_code() }
+    if handle.is_null() {
+        return 0;
+    }
+    unsafe {
+        (*(handle as *const GameBoyHandle))
+            .core
+            .apu
+            .ch3
+            .volume_code()
+    }
 }
 
 /// CH3 enabled flag.
 #[unsafe(no_mangle)]
 pub extern "C" fn gb_apu_ch3_enabled(handle: *const c_void) -> bool {
-    if handle.is_null() { return false; }
+    if handle.is_null() {
+        return false;
+    }
     unsafe { (*(handle as *const GameBoyHandle)).core.apu.ch3.enabled }
 }
 
@@ -551,20 +582,26 @@ pub extern "C" fn gb_apu_ch3_wave_ram(handle: *const c_void, buf: *mut u8, len: 
 /// CH4 envelope volume (0–15).
 #[unsafe(no_mangle)]
 pub extern "C" fn gb_apu_ch4_volume(handle: *const c_void) -> u8 {
-    if handle.is_null() { return 0; }
+    if handle.is_null() {
+        return 0;
+    }
     unsafe { (*(handle as *const GameBoyHandle)).core.apu.ch4.env_volume }
 }
 
 /// CH4 enabled flag.
 #[unsafe(no_mangle)]
 pub extern "C" fn gb_apu_ch4_enabled(handle: *const c_void) -> bool {
-    if handle.is_null() { return false; }
+    if handle.is_null() {
+        return false;
+    }
     unsafe { (*(handle as *const GameBoyHandle)).core.apu.ch4.enabled }
 }
 
 /// CH4 NR43 register (clock config: shift | width | divider).
 #[unsafe(no_mangle)]
 pub extern "C" fn gb_apu_ch4_nr43(handle: *const c_void) -> u8 {
-    if handle.is_null() { return 0; }
+    if handle.is_null() {
+        return 0;
+    }
     unsafe { (*(handle as *const GameBoyHandle)).core.apu.ch4.nr43 }
 }

@@ -290,7 +290,11 @@ impl Camera {
                     (inverted / 64).min(3)
                 };
 
-                let final_color = if output_negative || invert { 3 - color } else { color };
+                let final_color = if output_negative || invert {
+                    3 - color
+                } else {
+                    color
+                };
                 quantized[idx] = final_color;
                 color_counts[final_color as usize] += 1;
             }

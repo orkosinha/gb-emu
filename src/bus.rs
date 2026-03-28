@@ -25,7 +25,12 @@ impl<'a> MemoryBus<'a> {
         joypad: &'a mut Joypad,
         apu: &'a mut Apu,
     ) -> Self {
-        MemoryBus { memory, timer, joypad, apu }
+        MemoryBus {
+            memory,
+            timer,
+            joypad,
+            apu,
+        }
     }
 
     #[inline]

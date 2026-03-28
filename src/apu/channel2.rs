@@ -30,7 +30,9 @@ pub struct Channel2 {
 }
 
 impl Default for Channel2 {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Channel2 {
@@ -53,10 +55,18 @@ impl Channel2 {
 
     // ── Register access ──────────────────────────────────────────────────────
 
-    pub fn read_nr21(&self) -> u8 { self.nr21 | 0x3F }
-    pub fn read_nr22(&self) -> u8 { self.nr22 }
-    pub fn read_nr23(&self) -> u8 { 0xFF }
-    pub fn read_nr24(&self) -> u8 { self.nr24 | 0xBF }
+    pub fn read_nr21(&self) -> u8 {
+        self.nr21 | 0x3F
+    }
+    pub fn read_nr22(&self) -> u8 {
+        self.nr22
+    }
+    pub fn read_nr23(&self) -> u8 {
+        0xFF
+    }
+    pub fn read_nr24(&self) -> u8 {
+        self.nr24 | 0xBF
+    }
 
     pub fn write_nr21(&mut self, val: u8) {
         self.nr21 = val;
@@ -78,7 +88,7 @@ impl Channel2 {
     pub fn write_nr24(&mut self, val: u8, frame_seq_step: u8) {
         let old_len_en = (self.nr24 & 0x40) != 0;
         let new_len_en = (val & 0x40) != 0;
-        let trigger    = (val & 0x80) != 0;
+        let trigger = (val & 0x80) != 0;
 
         self.nr24 = val & 0x7F;
 
@@ -177,9 +187,17 @@ impl Channel2 {
     }
 
     pub fn power_off(&mut self) {
-        self.nr21 = 0; self.nr22 = 0; self.nr23 = 0; self.nr24 = 0;
-        self.enabled = false; self.dac_enabled = false;
-        self.freq_timer = 0; self.duty_pos = 0; self.length_counter = 0;
-        self.env_volume = 0; self.env_timer = 0; self.env_running = false;
+        self.nr21 = 0;
+        self.nr22 = 0;
+        self.nr23 = 0;
+        self.nr24 = 0;
+        self.enabled = false;
+        self.dac_enabled = false;
+        self.freq_timer = 0;
+        self.duty_pos = 0;
+        self.length_counter = 0;
+        self.env_volume = 0;
+        self.env_timer = 0;
+        self.env_running = false;
     }
 }

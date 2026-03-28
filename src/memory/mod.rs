@@ -6,9 +6,9 @@
 //! `cgb.mode` so a DMG ROM cannot accidentally trigger GBC behaviour.
 
 pub(crate) mod camera;
+pub mod cartridge;
 mod cgb;
 pub(crate) mod rtc;
-pub mod cartridge;
 
 use std::fmt;
 
@@ -39,18 +39,18 @@ pub(crate) mod io {
     pub const WX: u8 = 0x4B;
     // GBC registers
     pub const KEY1: u8 = 0x4D; // speed switch
-    pub const VBK: u8 = 0x4F;  // VRAM bank
+    pub const VBK: u8 = 0x4F; // VRAM bank
     pub const HDMA1: u8 = 0x51; // DMA source high
     pub const HDMA2: u8 = 0x52; // DMA source low
     pub const HDMA3: u8 = 0x53; // DMA dest high
     pub const HDMA4: u8 = 0x54; // DMA dest low
     pub const HDMA5: u8 = 0x55; // DMA control/trigger
-    pub const RP: u8 = 0x56;    // Infrared (stub)
-    pub const BCPS: u8 = 0x68;  // BG palette index
-    pub const BCPD: u8 = 0x69;  // BG palette data
-    pub const OCPS: u8 = 0x6A;  // OBJ palette index
-    pub const OCPD: u8 = 0x6B;  // OBJ palette data
-    pub const SVBK: u8 = 0x70;  // WRAM bank
+    pub const RP: u8 = 0x56; // Infrared (stub)
+    pub const BCPS: u8 = 0x68; // BG palette index
+    pub const BCPD: u8 = 0x69; // BG palette data
+    pub const OCPS: u8 = 0x6A; // OBJ palette index
+    pub const OCPD: u8 = 0x6B; // OBJ palette data
+    pub const SVBK: u8 = 0x70; // WRAM bank
 }
 
 /// Debug state for Memory inspection.
@@ -128,8 +128,7 @@ pub struct Memory {
 impl Memory {
     pub fn new() -> Self {
         // Default cartridge: NoMbc with empty ROM
-        let cartridge: Box<dyn Cartridge> =
-            Box::new(cartridge::NoMbc::new(vec![]));
+        let cartridge: Box<dyn Cartridge> = Box::new(cartridge::NoMbc::new(vec![]));
         let mut mem = Memory {
             cartridge,
             vram: [[0; 0x2000]; 2],
@@ -355,7 +354,6 @@ impl Memory {
         match offset {
             // 0xFF00 (joypad) is intercepted by MemoryBus
             // 0xFF04-0xFF07 (timer) are intercepted by MemoryBus
-
             0x02 => {
                 // SC: when bit 7 set, transfer SB to serial output
                 self.io[0x02] = value;
@@ -402,10 +400,9 @@ impl Memory {
             }
             0x55 => {
                 if self.cgb.mode {
-                    let source =
-                        ((self.io[0x51] as u16) << 8 | self.io[0x52] as u16) & 0xFFF0;
-                    let dest = 0x8000u16
-                        | (((self.io[0x53] as u16) << 8 | self.io[0x54] as u16) & 0x1FF0);
+                    let source = ((self.io[0x51] as u16) << 8 | self.io[0x52] as u16) & 0xFFF0;
+                    let dest =
+                        0x8000u16 | (((self.io[0x53] as u16) << 8 | self.io[0x54] as u16) & 0x1FF0);
                     self.cgb.hdma_source = source;
                     self.cgb.hdma_dest = dest;
                     if value & 0x80 == 0 {
@@ -436,8 +433,7 @@ impl Memory {
                 if self.cgb.mode {
                     self.cgb.bg_palette_ram[(self.cgb.bcps & 0x3F) as usize] = value;
                     if self.cgb.bcps & 0x80 != 0 {
-                        self.cgb.bcps =
-                            (self.cgb.bcps & 0x80) | ((self.cgb.bcps + 1) & 0x3F);
+                        self.cgb.bcps = (self.cgb.bcps & 0x80) | ((self.cgb.bcps + 1) & 0x3F);
                     }
                 }
             }
@@ -450,8 +446,7 @@ impl Memory {
                 if self.cgb.mode {
                     self.cgb.obj_palette_ram[(self.cgb.ocps & 0x3F) as usize] = value;
                     if self.cgb.ocps & 0x80 != 0 {
-                        self.cgb.ocps =
-                            (self.cgb.ocps & 0x80) | ((self.cgb.ocps + 1) & 0x3F);
+                        self.cgb.ocps = (self.cgb.ocps & 0x80) | ((self.cgb.ocps + 1) & 0x3F);
                     }
                 }
             }
@@ -528,6 +523,15 @@ impl Memory {
     #[cfg_attr(not(feature = "wasm"), allow(dead_code))] // wasm: clear_serial_output
     pub fn clear_serial_output(&mut self) {
         self.serial_output.clear();
+    }
+
+    /// Remove and return the oldest byte from the serial output buffer.
+    pub(crate) fn serial_take_output(&mut self) -> Option<u8> {
+        if self.serial_output.is_empty() {
+            None
+        } else {
+            Some(self.serial_output.remove(0))
+        }
     }
 
     /// Advance the RTC (delegated to cartridge; no-op for non-MBC3).

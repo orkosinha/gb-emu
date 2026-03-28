@@ -23,7 +23,9 @@ pub struct DoubleBuffer<const N: usize> {
 }
 
 impl<const N: usize> Default for DoubleBuffer<N> {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<const N: usize> DoubleBuffer<N> {
@@ -66,7 +68,9 @@ pub struct GameBoyCore {
 }
 
 impl Default for GameBoyCore {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GameBoyCore {
@@ -181,7 +185,9 @@ impl GameBoyCore {
 
     fn render_frame(&mut self) {
         // PPU writes RGBA directly — just copy the completed scanlines into the front buffer.
-        self.frame_buffer.back_mut().copy_from_slice(self.ppu.get_buffer());
+        self.frame_buffer
+            .back_mut()
+            .copy_from_slice(self.ppu.get_buffer());
         self.frame_buffer.swap();
     }
 
@@ -258,5 +264,118 @@ impl GameBoyCore {
     #[cfg_attr(not(feature = "ios"), allow(dead_code))] // ios: gb_camera_photo_count
     pub fn camera_photo_count(&self) -> u8 {
         self.memory.camera_photo_count()
+    }
+}
+
+// ── Native / DAW API ─────────────────────────────────────────────────────────
+//
+// Public methods used by native binaries
+//
+
+impl GameBoyCore {
+    // ── Memory access ────────────────────────────────────────────────────────
+
+    pub fn read_byte(&self, addr: u16) -> u8 {
+        self.memory.read(addr)
+    }
+
+    pub fn write_byte(&mut self, addr: u16, value: u8) {
+        self.memory.write(addr, value);
+    }
+
+    pub fn read_io(&self, offset: u8) -> u8 {
+        self.memory.read_io_direct(offset)
+    }
+
+    pub fn write_io(&mut self, offset: u8, value: u8) {
+        self.memory.write_io_direct(offset, value);
+    }
+
+    pub fn get_cartridge_ram(&self) -> &[u8] {
+        self.memory.get_cartridge_ram()
+    }
+
+    pub fn load_cartridge_ram(&mut self, data: &[u8]) {
+        self.memory.load_cartridge_ram(data);
+    }
+
+    // ── Sample-accurate stepping ─────────────────────────────────────────────
+
+    /// Run until at least `target` stereo sample pairs are in the APU buffer.
+    /// Returns the number of pairs actually generated (may exceed `target` by
+    /// up to one instruction's worth of samples due to instruction granularity).
+    pub fn step_samples(&mut self, target: usize) -> usize {
+        let before = self.apu.sample_buf.len() / 2;
+        while (self.apu.sample_buf.len() / 2) - before < target {
+            self.step_single();
+        }
+        (self.apu.sample_buf.len() / 2) - before
+    }
+
+    // ── Serial port injection ────────────────────────────────────────────────
+
+    /// Simulate an external device sending one byte to the GB serial port.
+    /// Places `byte` in SB, configures SC for external-clock mode, and fires
+    /// the serial interrupt (IF bit 3). Used to drive LSDJ in slave sync mode.
+    pub fn serial_inject(&mut self, byte: u8) {
+        self.memory.write_io_direct(0x01, byte); // SB
+        let sc = self.memory.read_io_direct(0x02) & 0x7E; // SC: external clock
+        self.memory.write_io_direct(0x02, sc);
+        self.interrupts.request(Interrupt::Serial, &mut self.memory); // IF bit 3
+    }
+
+    /// Return and remove the oldest byte from the serial output buffer, or
+    /// `None` if LSDJ has not transmitted anything since the last call.
+    pub fn serial_take_output(&mut self) -> Option<u8> {
+        self.memory.serial_take_output()
+    }
+
+    // ── APU state ────────────────────────────────────────────────────────────
+
+    pub fn apu_powered(&self) -> bool {
+        self.apu.powered()
+    }
+    pub fn apu_sample_len(&self) -> usize {
+        self.apu.sample_buf.len()
+    }
+    pub fn apu_sample_buf(&self) -> &[f32] {
+        &self.apu.sample_buf
+    }
+    pub fn apu_clear_samples(&mut self) {
+        self.apu.clear_samples();
+    }
+
+    pub fn apu_ch1_enabled(&self) -> bool {
+        self.apu.ch1.enabled
+    }
+    pub fn apu_ch1_freq_hz(&self) -> f32 {
+        self.apu.ch1.freq_hz()
+    }
+
+    pub fn apu_ch2_enabled(&self) -> bool {
+        self.apu.ch2.enabled
+    }
+    pub fn apu_ch2_freq_hz(&self) -> f32 {
+        self.apu.ch2.freq_hz()
+    }
+
+    pub fn apu_ch3_enabled(&self) -> bool {
+        self.apu.ch3.enabled
+    }
+    pub fn apu_ch3_freq_hz(&self) -> f32 {
+        self.apu.ch3.freq_hz()
+    }
+
+    pub fn apu_ch4_enabled(&self) -> bool {
+        self.apu.ch4.enabled
+    }
+
+    // ── Counters ─────────────────────────────────────────────────────────────
+
+    pub fn total_cycles(&self) -> u64 {
+        self.total_cycles
+    }
+    pub fn frame_count(&self) -> u32 {
+        self.frame_count
     }
 }
