@@ -1192,8 +1192,11 @@ impl Cpu {
                 self.execute_cb(cb_opcode, bus)
             }
 
+            // Undefined/illegal opcodes on SM83 (D3, DB, DD, E3, E4, EB, EC, ED, F4, FC, FD).
+            // Real hardware locks the CPU indefinitely; treat as NOP for emulation compatibility.
+            0xD3 | 0xDB | 0xDD | 0xE3 | 0xE4 | 0xEB | 0xEC | 0xED | 0xF4 | 0xFC | 0xFD => 4,
+
             _ => {
-                // Unimplemented opcode
                 panic!(
                     "Unimplemented opcode: 0x{:02X} at PC: 0x{:04X}",
                     opcode,

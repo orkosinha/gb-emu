@@ -134,8 +134,16 @@ impl GameBoyCore {
             if self.ppu.took_hblank_step() {
                 self.memory.tick_hdma_hblank();
             }
-            // APU ticks in lockstep; div_counter drives the frame sequencer.
-            self.apu.tick(cycles, self.timer.div_counter());
+            // In GBC double-speed mode the CPU runs at 8.388 MHz but the APU runs at
+            // 4.194 MHz (1×).  Halve the cycles so channel timers advance at the correct
+            // rate.  div_counter also increments 2× faster in double-speed, so shift it
+            // right by 1 to keep the frame-sequencer bit-12 edge at the correct 512 Hz.
+            let (apu_cycles, apu_div) = if self.memory.is_double_speed() {
+                (cycles / 2, self.timer.div_counter() >> 1)
+            } else {
+                (cycles, self.timer.div_counter())
+            };
+            self.apu.tick(apu_cycles, apu_div);
 
             cycles_elapsed += cycles;
             instructions_this_frame += 1;
@@ -170,7 +178,12 @@ impl GameBoyCore {
         if self.ppu.took_hblank_step() {
             self.memory.tick_hdma_hblank();
         }
-        self.apu.tick(cycles, self.timer.div_counter());
+        let (apu_cycles, apu_div) = if self.memory.is_double_speed() {
+            (cycles / 2, self.timer.div_counter() >> 1)
+        } else {
+            (cycles, self.timer.div_counter())
+        };
+        self.apu.tick(apu_cycles, apu_div);
 
         self.total_cycles += cycles as u64;
         self.instruction_count += 1;
@@ -304,9 +317,17 @@ impl GameBoyCore {
     /// Run until at least `target` stereo sample pairs are in the APU buffer.
     /// Returns the number of pairs actually generated (may exceed `target` by
     /// up to one instruction's worth of samples due to instruction granularity).
+    ///
+    /// If the APU is powered off or the CPU is permanently halted, the loop
+    /// exits after a cycle budget of `target × 200` cycles to prevent hangs.
     pub fn step_samples(&mut self, target: usize) -> usize {
         let before = self.apu.sample_buf.len() / 2;
+        // ~95 cycles per sample at 4.19 MHz / 44100 Hz; 200× is a generous budget.
+        let max_cycles = self.total_cycles + (target as u64) * 200;
         while (self.apu.sample_buf.len() / 2) - before < target {
+            if self.total_cycles >= max_cycles {
+                break;
+            }
             self.step_single();
         }
         (self.apu.sample_buf.len() / 2) - before
