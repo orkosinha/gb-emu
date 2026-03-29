@@ -339,11 +339,7 @@ pub extern "C" fn gb_get_cartridge_ram(
 
 /// Load cartridge SRAM from `data`. Returns true on success.
 #[unsafe(no_mangle)]
-pub extern "C" fn gb_load_cartridge_ram(
-    handle: *mut c_void,
-    data: *const u8,
-    len: usize,
-) -> bool {
+pub extern "C" fn gb_load_cartridge_ram(handle: *mut c_void, data: *const u8, len: usize) -> bool {
     if handle.is_null() || data.is_null() || len == 0 {
         return false;
     }
