@@ -15,8 +15,7 @@ description = "Build WASM package with debug feature (publishes as @orkosinha/gb
 run = """
 #!/usr/bin/env bash
 set -e
-wasm-pack build --scope orkosinha --target web --features wasm,debug --no-default-features --release
-cp -r pkg pkg-debug
+wasm-pack build --scope orkosinha --target web --features wasm,debug --no-default-featurescp -r pkg pkg-debug
 node -e "
 const fs = require('fs');
 const p = JSON.parse(fs.readFileSync('pkg-debug/package.json', 'utf8'));
