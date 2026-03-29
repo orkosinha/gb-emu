@@ -21,3 +21,19 @@ jobs:
         working-directory: pkg
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-npm-debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          registry-url: 'https://registry.npmjs.org'
+      - run: mise run build:debug
+      - name: Publish devtools package to npm
+        run: npm publish --access public
+        working-directory: pkg-debug
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

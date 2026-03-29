@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 /// Log categories for filtering and rate limiting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(not(feature = "wasm"), allow(dead_code))] // wasm: some variants only used in wasm.rs
+#[allow(dead_code)] // public API — variants are available for use by any caller
 pub enum LogCategory {
     Camera,
     Memory,

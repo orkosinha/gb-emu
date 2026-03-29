@@ -18,7 +18,7 @@ use crate::memory::Memory;
 use crate::memory::io;
 
 /// Debug state for PPU inspection.
-#[cfg_attr(not(feature = "wasm"), allow(dead_code))] // wasm: ppu_* accessors
+#[cfg_attr(not(feature = "debug"), allow(dead_code))]
 pub struct PpuDebugState {
     pub mode: u8,
     pub mode_name: &'static str,
@@ -38,7 +38,7 @@ impl fmt::Display for PpuDebugState {
 }
 
 impl PpuMode {
-    #[cfg_attr(not(feature = "wasm"), allow(dead_code))] // wasm: PpuDebugState
+    #[cfg_attr(not(feature = "debug"), allow(dead_code))]
     fn name(self) -> &'static str {
         match self {
             PpuMode::HBlank => "HBLANK",
@@ -283,7 +283,7 @@ impl Ppu {
     }
 
     /// Get current PPU state for debugging.
-    #[cfg_attr(not(feature = "wasm"), allow(dead_code))] // wasm: ppu_* accessors
+    #[cfg_attr(not(feature = "debug"), allow(dead_code))]
     pub fn get_debug_state(&self) -> PpuDebugState {
         PpuDebugState {
             mode: self.mode as u8,
@@ -292,12 +292,6 @@ impl Ppu {
             cycles: self.cycles,
             window_line_counter: self.window_line_counter,
         }
-    }
-
-    /// Count non-zero bytes in the buffer (useful for debug/test assertions).
-    #[cfg_attr(not(feature = "wasm"), allow(dead_code))] // wasm: log_frame_debug
-    pub fn count_non_zero_pixels(&self) -> usize {
-        self.buffer.iter().filter(|&&p| p != 0).count()
     }
 }
 

@@ -45,8 +45,23 @@ pub trait Cartridge {
     fn write_ram(&mut self, addr: u16, value: u8);
     /// Borrow the full cartridge RAM slice (for save data export).
     fn ram_data(&self) -> &[u8];
+    /// Borrow the full ROM slice (for hardware reset).
+    fn rom_data(&self) -> &[u8];
     /// Load save data into cartridge RAM (truncated if too long).
     fn load_ram(&mut self, data: &[u8]);
+    /// Write a single byte to the cartridge RAM at a flat save-file offset,
+    /// bypassing MBC bank-register logic.  No-op for cartridges with no RAM.
+    fn write_ram_flat(&mut self, offset: usize, value: u8) {
+        let _ = (offset, value);
+    }
+    /// Write a contiguous slice to the cartridge RAM starting at `offset`.
+    /// No-op for cartridges with no RAM.  Default dispatches through
+    /// `write_ram_flat`; override with a `copy_from_slice` where possible.
+    fn write_ram_range_flat(&mut self, offset: usize, data: &[u8]) {
+        for (i, &b) in data.iter().enumerate() {
+            self.write_ram_flat(offset + i, b);
+        }
+    }
     /// MBC type identifier.
     fn mbc_type(&self) -> MbcType;
     /// Total number of 16KB ROM banks.

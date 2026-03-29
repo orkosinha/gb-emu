@@ -279,6 +279,12 @@ impl Eeprom93lc56 {
         &self.data
     }
 
+    pub fn write_byte_flat(&mut self, offset: usize, value: u8) {
+        if let Some(b) = self.data.get_mut(offset) {
+            *b = value;
+        }
+    }
+
     pub fn load_bytes(&mut self, bytes: &[u8]) {
         let len = bytes.len().min(256);
         self.data[..len].copy_from_slice(&bytes[..len]);
@@ -420,8 +426,16 @@ impl Cartridge for Mbc7 {
         self.eeprom.as_bytes()
     }
 
+    fn rom_data(&self) -> &[u8] {
+        &self.rom
+    }
+
     fn load_ram(&mut self, data: &[u8]) {
         self.eeprom.load_bytes(data);
+    }
+
+    fn write_ram_flat(&mut self, offset: usize, value: u8) {
+        self.eeprom.write_byte_flat(offset, value);
     }
 
     fn mbc_type(&self) -> MbcType {

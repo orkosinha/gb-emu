@@ -170,15 +170,28 @@ impl Memory {
         if data.len() < 0x150 {
             return Err("ROM too small");
         }
+        self.apply_rom(data.to_vec(), cgb_mode);
+        Ok(())
+    }
 
-        let cart_type = data[0x0147];
+    /// Reset all hardware state to power-on defaults, re-creating the cartridge
+    /// from its existing ROM.  Save RAM is lost; call `load_cartridge_ram` after
+    /// this if you need to restore it.
+    pub(crate) fn reset_hardware(&mut self) {
+        let cgb_mode = self.cgb.mode;
+        let rom = self.cartridge.rom_data().to_vec();
+        self.apply_rom(rom, cgb_mode);
+    }
+
+    /// Common path for `load_rom` and `reset_hardware`: takes ownership of a ROM
+    /// Vec, builds a cartridge, and resets all addressable memory.
+    fn apply_rom(&mut self, rom: Vec<u8>, cgb_mode: bool) {
+        let cart_type = rom[0x0147];
         let ram_size = if cart_type == 0xFC {
             128 * 1024 // Game Boy Camera always has 128KB RAM
         } else {
-            ram_size_from_header(data[0x0149])
+            ram_size_from_header(rom[0x0149])
         };
-
-        // Reset hardware state (power cycle)
         self.vram = [[0; 0x2000]; 2];
         self.wram = [[0; 0x1000]; 8];
         self.oam = [0; 0xA0];
@@ -188,10 +201,7 @@ impl Memory {
         self.cgb = Cgb::new();
         self.cgb.mode = cgb_mode;
         self.init_io_defaults();
-
-        self.cartridge = make_cartridge(data.to_vec(), cart_type, ram_size);
-
-        Ok(())
+        self.cartridge = make_cartridge(rom, cart_type, ram_size);
     }
 
     #[inline]
@@ -494,6 +504,22 @@ impl Memory {
 
     pub fn load_cartridge_ram(&mut self, data: &[u8]) {
         self.cartridge.load_ram(data);
+    }
+
+    /// Write one byte to the cartridge SRAM at a flat `.sav` offset, bypassing
+    /// MBC bank selection.
+    pub fn write_cartridge_ram_flat(&mut self, flat_offset: usize, value: u8) {
+        self.cartridge.write_ram_flat(flat_offset, value);
+    }
+
+    /// Write a contiguous slice to the cartridge SRAM starting at `flat_offset`.
+    pub fn write_cartridge_ram_range_flat(&mut self, flat_offset: usize, data: &[u8]) {
+        self.cartridge.write_ram_range_flat(flat_offset, data);
+    }
+
+    /// Borrow the full ROM data (used by `reset` to reload the cartridge).
+    pub fn get_rom_data(&self) -> &[u8] {
+        self.cartridge.rom_data()
     }
 
     /// Read a camera hardware register directly (index 0x00-0x7F).

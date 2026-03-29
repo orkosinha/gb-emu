@@ -1,6 +1,13 @@
 # gb-emu
 
-A cycle accurate Game Boy and Game Boy Color emulator. Targets WebAssembly (via wasm-pack) and native platforms (via C FFI).
+A cycle-accurate Game Boy and Game Boy Color emulator. Targets WebAssembly (via wasm-pack) and native platforms (via C FFI).
+
+## Packages
+
+| Package | Features | Use case |
+|---|---|---|
+| `@orkosinha/gb-emu` | Core emulator | Production apps |
+| `@orkosinha/gb-emu-devtools` | + Introspection API | Debuggers, dev tools |
 
 ## Usage
 
@@ -32,7 +39,6 @@ API: [`src/core.rs`](https://github.com/orkosinha/gb-emu/blob/main/src/core.rs)
 ## Release
 
 ```bash
-# add NPM_TOKEN
-mise run setup:secrets      # push token to GitHub
-mise run release -- 0.2.0   # tag + push → CI publishes to npm
+mise run setup:secrets      # push NPM_TOKEN to GitHub (first time only)
+mise run release -- 0.2.0   # bump version, tag, push → CI publishes both packages
 ```

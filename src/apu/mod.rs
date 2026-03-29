@@ -46,7 +46,7 @@ const VIZ_SIZE: usize = 512;
 
 // ── Debug state ─────────────────────────────────────────────────────────────
 
-/// Per-channel debug snapshot — enough data to render a LSDJ-style tracker UI.
+/// Per-channel debug snapshot for rendering a tracker-style debug UI.
 #[derive(Clone, Default)]
 pub struct ChannelDebug {
     pub enabled: bool,
@@ -438,7 +438,7 @@ impl Apu {
         }
     }
 
-    fn ch1_debug(&self) -> ChannelDebug {
+    pub fn ch1_debug(&self) -> ChannelDebug {
         let freq = self.ch1.frequency();
         let hz = self.ch1.freq_hz();
         ChannelDebug {
@@ -461,7 +461,7 @@ impl Apu {
         }
     }
 
-    fn ch2_debug(&self) -> ChannelDebug {
+    pub fn ch2_debug(&self) -> ChannelDebug {
         let freq = self.ch2.frequency();
         let hz = self.ch2.freq_hz();
         ChannelDebug {
@@ -481,7 +481,7 @@ impl Apu {
         }
     }
 
-    fn ch3_debug(&self) -> ChannelDebug {
+    pub fn ch3_debug(&self) -> ChannelDebug {
         let freq = self.ch3.frequency();
         let hz = self.ch3.freq_hz();
         ChannelDebug {
@@ -499,7 +499,7 @@ impl Apu {
         }
     }
 
-    fn ch4_debug(&self) -> ChannelDebug {
+    pub fn ch4_debug(&self) -> ChannelDebug {
         let hz = self.ch4.freq_hz();
         ChannelDebug {
             enabled: self.ch4.enabled,

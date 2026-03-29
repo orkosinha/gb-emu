@@ -10,6 +10,20 @@ _.file = ".env"
 description = "Build WASM package"
 run = "wasm-pack build --scope orkosinha --target web --features wasm --no-default-features"
 
+[tasks."build:debug"]
+description = "Build WASM package with debug feature (publishes as @orkosinha/gb-emu-debug)"
+run = """
+#!/usr/bin/env bash
+set -e
+wasm-pack build --scope orkosinha --target web --features wasm,debug --no-default-features --out-dir pkg-debug
+node -e "
+const fs = require('fs');
+const p = JSON.parse(fs.readFileSync('pkg-debug/package.json', 'utf8'));
+p.name = '@orkosinha/gb-emu-devtools';
+fs.writeFileSync('pkg-debug/package.json', JSON.stringify(p, null, 2) + '\\n');
+"
+"""
+
 [tasks.test]
 description = "Run tests"
 run = "cargo test --no-default-features"

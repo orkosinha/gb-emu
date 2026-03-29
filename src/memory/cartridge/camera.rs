@@ -191,9 +191,26 @@ impl Cartridge for PocketCamera {
         &self.camera.ram
     }
 
+    fn rom_data(&self) -> &[u8] {
+        &self.rom
+    }
+
     fn load_ram(&mut self, data: &[u8]) {
         let len = data.len().min(self.camera.ram.len());
         self.camera.ram[..len].copy_from_slice(&data[..len]);
+    }
+
+    fn write_ram_flat(&mut self, offset: usize, value: u8) {
+        if let Some(b) = self.camera.ram.get_mut(offset) {
+            *b = value;
+        }
+    }
+
+    fn write_ram_range_flat(&mut self, offset: usize, data: &[u8]) {
+        let end = (offset + data.len()).min(self.camera.ram.len());
+        if offset < end {
+            self.camera.ram[offset..end].copy_from_slice(&data[..end - offset]);
+        }
     }
 
     fn mbc_type(&self) -> MbcType {

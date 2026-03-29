@@ -5,6 +5,9 @@
 //! buttons (Up/Down/Left/Right), then reads bits 0-3 to get the state.
 //! All button signals are active-low (0 = pressed).
 
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::wasm_bindgen;
+
 pub struct Joypad {
     // Button states (active low in hardware, but we track as true = pressed)
     a: bool,
@@ -22,6 +25,7 @@ pub struct Joypad {
 }
 
 /// Game Boy joypad buttons.
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Button {

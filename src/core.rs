@@ -92,9 +92,21 @@ impl GameBoyCore {
     }
 
     pub fn load_rom(&mut self, rom_data: &[u8], cgb_mode: bool) -> Result<(), &'static str> {
-        // Memory reset first (validates ROM, resets all hardware registers)
         self.memory.load_rom(rom_data, cgb_mode)?;
-        // Reset remaining components to their power-on state
+        self.reset_components(cgb_mode);
+        Ok(())
+    }
+
+    /// Power-cycle the emulator: resets CPU, PPU, APU, timer, and MBC banking
+    /// state to power-on defaults.  Save RAM is cleared; call `load_cartridge_ram`
+    /// after this to restore a previous save.
+    pub fn reset(&mut self) {
+        let cgb_mode = self.memory.is_cgb_mode();
+        self.memory.reset_hardware();
+        self.reset_components(cgb_mode);
+    }
+
+    fn reset_components(&mut self, cgb_mode: bool) {
         self.cpu.reset(cgb_mode);
         self.ppu.reset(cgb_mode);
         self.timer = crate::timer::Timer::new();
@@ -104,7 +116,6 @@ impl GameBoyCore {
         self.frame_count = 0;
         self.total_cycles = 0;
         self.instruction_count = 0;
-        Ok(())
     }
 
     /// Run one frame of emulation (~16.74ms of Game Boy time).
@@ -161,7 +172,6 @@ impl GameBoyCore {
     /// Execute a single CPU instruction, ticking timer and PPU.
     /// If a frame boundary is crossed (VBlank entry), renders the frame.
     /// Returns the number of T-cycles consumed.
-    #[cfg_attr(not(feature = "wasm"), allow(dead_code))] // wasm: step_instruction
     pub fn step_single(&mut self) -> u32 {
         let cycles = {
             let mut bus = MemoryBus::new(
@@ -280,7 +290,7 @@ impl GameBoyCore {
     }
 }
 
-// ── Native / DAW API ─────────────────────────────────────────────────────────
+// ── Native API ───────────────────────────────────────────────────────────────
 //
 // Public methods used by native binaries
 //
@@ -337,7 +347,7 @@ impl GameBoyCore {
 
     /// Simulate an external device sending one byte to the GB serial port.
     /// Places `byte` in SB, configures SC for external-clock mode, and fires
-    /// the serial interrupt (IF bit 3). Used to drive LSDJ in slave sync mode.
+    /// the serial interrupt (IF bit 3).
     pub fn serial_inject(&mut self, byte: u8) {
         self.memory.write_io_direct(0x01, byte); // SB
         let sc = self.memory.read_io_direct(0x02) & 0x7E; // SC: external clock
@@ -346,7 +356,7 @@ impl GameBoyCore {
     }
 
     /// Return and remove the oldest byte from the serial output buffer, or
-    /// `None` if LSDJ has not transmitted anything since the last call.
+    /// `None` if the GB has not transmitted anything since the last call.
     pub fn serial_take_output(&mut self) -> Option<u8> {
         self.memory.serial_take_output()
     }

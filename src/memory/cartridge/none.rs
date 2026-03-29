@@ -35,6 +35,10 @@ impl Cartridge for NoMbc {
         &[]
     }
 
+    fn rom_data(&self) -> &[u8] {
+        &self.rom
+    }
+
     fn load_ram(&mut self, _data: &[u8]) {}
 
     fn mbc_type(&self) -> MbcType {

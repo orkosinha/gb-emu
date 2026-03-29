@@ -1,4 +1,5 @@
 /target
 /pkg
+/pkg-debug
 Cargo.lock
 .env

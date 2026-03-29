@@ -62,6 +62,19 @@ pub extern "C" fn gb_load_rom(
     }
 }
 
+/// Power-cycle: reset CPU, PPU, APU, timer, and MBC banking state.
+/// Cartridge SRAM is cleared; call `gb_load_cartridge_ram` to restore it.
+#[unsafe(no_mangle)]
+pub extern "C" fn gb_reset(handle: *mut c_void) {
+    if handle.is_null() {
+        return;
+    }
+    unsafe {
+        let gb = &mut *(handle as *mut GameBoyHandle);
+        gb.core.reset();
+    }
+}
+
 /// Run one frame of emulation (~16.74ms of Game Boy time).
 #[unsafe(no_mangle)]
 pub extern "C" fn gb_step_frame(handle: *mut c_void) {
@@ -72,6 +85,52 @@ pub extern "C" fn gb_step_frame(handle: *mut c_void) {
     unsafe {
         let gb = &mut *(handle as *mut GameBoyHandle);
         gb.core.step_frame();
+    }
+}
+
+/// Run until at least `n` stereo sample pairs have been generated.
+/// Returns the number of pairs actually produced (may exceed `n` by up to one
+/// instruction's worth due to granularity).
+#[unsafe(no_mangle)]
+pub extern "C" fn gb_step_samples(handle: *mut c_void, n: usize) -> usize {
+    if handle.is_null() {
+        return 0;
+    }
+    unsafe {
+        let gb = &mut *(handle as *mut GameBoyHandle);
+        gb.core.step_samples(n)
+    }
+}
+
+/// Simulate an external device sending one byte on the serial link.
+/// Places `byte` in SB, sets SC to external-clock mode, fires the serial interrupt.
+#[unsafe(no_mangle)]
+pub extern "C" fn gb_serial_inject(handle: *mut c_void, byte: u8) {
+    if handle.is_null() {
+        return;
+    }
+    unsafe {
+        let gb = &mut *(handle as *mut GameBoyHandle);
+        gb.core.serial_inject(byte);
+    }
+}
+
+/// Return and consume the oldest byte from the serial output buffer.
+/// Writes the byte to `*out` and returns true if one was available; returns
+/// false (and leaves `*out` unchanged) if the buffer is empty.
+#[unsafe(no_mangle)]
+pub extern "C" fn gb_serial_take_output(handle: *mut c_void, out: *mut u8) -> bool {
+    if handle.is_null() || out.is_null() {
+        return false;
+    }
+    unsafe {
+        let gb = &mut *(handle as *mut GameBoyHandle);
+        if let Some(byte) = gb.core.serial_take_output() {
+            *out = byte;
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -245,23 +304,21 @@ pub extern "C" fn gb_get_frame_count(handle: *const c_void) -> u32 {
     }
 }
 
-/// Get cartridge RAM (save data) size.
+/// Return the size of the cartridge SRAM in bytes (0 if no RAM).
 #[unsafe(no_mangle)]
-pub extern "C" fn gb_get_save_size(handle: *const c_void) -> usize {
+pub extern "C" fn gb_get_cartridge_ram_len(handle: *const c_void) -> usize {
     if handle.is_null() {
         return 0;
     }
-
     unsafe {
         let gb = &*(handle as *const GameBoyHandle);
         gb.core.memory.get_cartridge_ram().len()
     }
 }
 
-/// Copy cartridge RAM (save data) to the provided buffer.
-/// Returns the number of bytes copied, or 0 on error.
+/// Copy cartridge SRAM to `buffer`. Returns bytes copied, or 0 on error.
 #[unsafe(no_mangle)]
-pub extern "C" fn gb_get_save_data(
+pub extern "C" fn gb_get_cartridge_ram(
     handle: *const c_void,
     buffer: *mut u8,
     buffer_len: usize,
@@ -269,28 +326,27 @@ pub extern "C" fn gb_get_save_data(
     if handle.is_null() || buffer.is_null() {
         return 0;
     }
-
     unsafe {
         let gb = &*(handle as *const GameBoyHandle);
         let ram = gb.core.memory.get_cartridge_ram();
-        let copy_len = ram.len().min(buffer_len);
-
-        if copy_len > 0 {
-            ptr::copy_nonoverlapping(ram.as_ptr(), buffer, copy_len);
+        let n = ram.len().min(buffer_len);
+        if n > 0 {
+            ptr::copy_nonoverlapping(ram.as_ptr(), buffer, n);
         }
-
-        copy_len
+        n
     }
 }
 
-/// Load cartridge RAM (save data) from the provided buffer.
-/// Returns true on success.
+/// Load cartridge SRAM from `data`. Returns true on success.
 #[unsafe(no_mangle)]
-pub extern "C" fn gb_load_save_data(handle: *mut c_void, data: *const u8, len: usize) -> bool {
+pub extern "C" fn gb_load_cartridge_ram(
+    handle: *mut c_void,
+    data: *const u8,
+    len: usize,
+) -> bool {
     if handle.is_null() || data.is_null() || len == 0 {
         return false;
     }
-
     unsafe {
         let gb = &mut *(handle as *mut GameBoyHandle);
         let save_data = slice::from_raw_parts(data, len);
@@ -475,7 +531,7 @@ pub extern "C" fn gb_apu_powered(handle: *const c_void) -> bool {
     }
 }
 
-// ── Per-channel debug info (for LSDJ-style debug panel) ──────────────────────
+// ── Per-channel debug info ────────────────────────────────────────────────────
 
 /// CH1 frequency register value (0–2047).
 #[unsafe(no_mangle)]
