@@ -1,6 +1,6 @@
 [package]
 name = "gb-emu"
-version = 0.2.1
+version = "0.2.1"
 edition = "2024"
 description = "Game Boy Camera emulator core"
 repository = "https://github.com/orkosinha/gb-emu"
