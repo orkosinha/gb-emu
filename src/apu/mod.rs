@@ -141,6 +141,33 @@ impl Default for Apu {
     }
 }
 
+impl crate::snapshot::Snapshot for Apu {
+    fn snapshot(&self, w: &mut crate::snapshot::SnapWriter) {
+        w.u8(self.nr50); w.u8(self.nr51); w.u8(self.nr52);
+        w.u8(self.frame_seq_step); w.bool(self.prev_div_bit12);
+        w.f64(self.sample_accum);
+        w.f32(self.hpf_cap_l); w.f32(self.hpf_cap_r);
+        self.ch1.snapshot(w);
+        self.ch2.snapshot(w);
+        self.ch3.snapshot(w);
+        self.ch4.snapshot(w);
+        // sample_buf / viz_buf / viz_wp excluded: audio ring buffer must not
+        // be reset across restore() to prevent audible clicks.
+    }
+
+    fn restore_from(&mut self, r: &mut crate::snapshot::SnapReader) -> Result<(), &'static str> {
+        self.nr50 = r.u8()?; self.nr51 = r.u8()?; self.nr52 = r.u8()?;
+        self.frame_seq_step = r.u8()?; self.prev_div_bit12 = r.bool()?;
+        self.sample_accum = r.f64()?;
+        self.hpf_cap_l = r.f32()?; self.hpf_cap_r = r.f32()?;
+        self.ch1.restore_from(r)?;
+        self.ch2.restore_from(r)?;
+        self.ch3.restore_from(r)?;
+        self.ch4.restore_from(r)?;
+        Ok(())
+    }
+}
+
 impl Apu {
     pub fn new() -> Self {
         Apu {

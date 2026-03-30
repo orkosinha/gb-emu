@@ -19,6 +19,7 @@ pub mod joypad;
 mod log;
 pub mod memory;
 mod ppu;
+mod snapshot;
 mod timer;
 
 pub use core::GameBoyCore;

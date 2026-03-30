@@ -92,6 +92,15 @@ pub trait Cartridge {
     fn as_mbc7_mut(&mut self) -> Option<&mut Mbc7> {
         None
     }
+
+    /// Serialize MBC banking registers (ROM bank, RAM bank, enable flags, RTC).
+    /// Excludes ROM and RAM data — those are handled by `rom_data`/`ram_data`.
+    fn snapshot_banking(&self) -> Vec<u8> {
+        Vec::new()
+    }
+
+    /// Restore MBC banking registers from a buffer produced by `snapshot_banking`.
+    fn restore_banking(&mut self, _data: &[u8]) {}
 }
 
 /// Determine RAM size from cartridge header byte 0x0149.

@@ -457,4 +457,18 @@ impl Cartridge for Mbc7 {
     fn as_mbc7_mut(&mut self) -> Option<&mut Mbc7> {
         Some(self)
     }
+
+    fn snapshot_banking(&self) -> Vec<u8> {
+        let mut w = crate::snapshot::SnapWriter::new();
+        w.u16(self.rom_bank);
+        w.bool(self.ram_gate1); w.bool(self.ram_gate2);
+        w.into_vec()
+    }
+
+    fn restore_banking(&mut self, data: &[u8]) {
+        let mut r = crate::snapshot::SnapReader::new(data);
+        if let (Ok(rb), Ok(g1), Ok(g2)) = (r.u16(), r.bool(), r.bool()) {
+            self.rom_bank = rb; self.ram_gate1 = g1; self.ram_gate2 = g2;
+        }
+    }
 }

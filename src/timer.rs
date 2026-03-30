@@ -114,6 +114,20 @@ impl Default for Timer {
     }
 }
 
+impl crate::snapshot::Snapshot for Timer {
+    fn snapshot(&self, w: &mut crate::snapshot::SnapWriter) {
+        w.u16(self.div_counter);
+        w.u8(self.tima); w.u8(self.tma); w.u8(self.tac); w.u8(self.overflow_cycles);
+    }
+
+    fn restore_from(&mut self, r: &mut crate::snapshot::SnapReader) -> Result<(), &'static str> {
+        self.div_counter = r.u16()?;
+        self.tima = r.u8()?; self.tma = r.u8()?; self.tac = r.u8()?;
+        self.overflow_cycles = r.u8()?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

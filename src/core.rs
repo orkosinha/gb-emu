@@ -10,6 +10,7 @@ use crate::interrupts::{Interrupt, InterruptController};
 use crate::joypad::Joypad;
 use crate::memory::Memory;
 use crate::ppu::Ppu;
+use crate::snapshot::{SnapReader, SnapWriter, Snapshot};
 use crate::timer::Timer;
 
 const CYCLES_PER_FRAME: u32 = 70_224;
@@ -408,5 +409,221 @@ impl GameBoyCore {
     }
     pub fn frame_count(&self) -> u32 {
         self.frame_count
+    }
+}
+
+// ── Snapshot / Restore ────────────────────────────────────────────────────────
+
+const SNAP_MAGIC: &[u8] = b"GBSNAP1";
+const SNAP_VERSION: u8 = 1;
+
+impl GameBoyCore {
+    /// Serialize the full emulator state to a byte buffer.
+    ///
+    /// Excludes the ROM binary (the caller holds it) and the audio output
+    /// ring buffer, so `audio_sample_buffer_ptr()` remains valid and queued
+    /// samples play through without a click after `restore()`.
+    ///
+    /// Typical sizes: ~50 KB (no cart RAM) · ~82 KB (32 KB LSDJ cart RAM).
+    pub fn snapshot(&self) -> Vec<u8> {
+        let mut w = SnapWriter::new();
+        w.bytes(SNAP_MAGIC);
+        w.u8(SNAP_VERSION);
+        self.cpu.snapshot(&mut w);
+        self.timer.snapshot(&mut w);
+        self.ppu.snapshot(&mut w);
+        self.apu.snapshot(&mut w);
+        self.joypad.snapshot(&mut w);
+        self.memory.snapshot(&mut w);
+        w.u32(self.frame_count);
+        w.u64(self.total_cycles);
+        w.u64(self.instruction_count);
+        w.into_vec()
+    }
+
+    /// Restore emulator state from a buffer produced by `snapshot()`.
+    ///
+    /// The audio output ring buffer is preserved — no audible click.
+    /// Returns an error if the buffer is truncated or version-incompatible.
+    pub fn restore(&mut self, data: &[u8]) -> Result<(), &'static str> {
+        let mut r = SnapReader::new(data);
+        let magic = r.bytes(SNAP_MAGIC.len())?;
+        if magic != SNAP_MAGIC {
+            return Err("invalid snapshot magic");
+        }
+        if r.u8()? != SNAP_VERSION {
+            return Err("unsupported snapshot version");
+        }
+        self.cpu.restore_from(&mut r)?;
+        self.timer.restore_from(&mut r)?;
+        self.ppu.restore_from(&mut r)?;
+        self.apu.restore_from(&mut r)?;
+        self.joypad.restore_from(&mut r)?;
+        self.memory.restore_from(&mut r)?;
+        self.frame_count = r.u32()?;
+        self.total_cycles = r.u64()?;
+        self.instruction_count = r.u64()?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 32 KB NoMBC ROM: NOP at 0x0100, then JR -2 (infinite loop).
+    fn minimal_rom() -> Vec<u8> {
+        let mut rom = vec![0u8; 0x8000];
+        rom[0x0100] = 0x00; // NOP
+        rom[0x0101] = 0x18; // JR
+        rom[0x0102] = 0xFE; // -2  →  loops forever at 0x0101
+        rom
+    }
+
+    /// 64 KB MBC1 ROM (4 banks).
+    /// Bank 1 @ 0x4000 = 0xAA, bank 2 @ 0x8000 = 0xBB.
+    fn mbc1_multibank_rom() -> Vec<u8> {
+        let mut rom = vec![0u8; 0x10000];
+        rom[0x0147] = 0x01; // MBC1
+        rom[0x0100] = 0x18; // JR -2
+        rom[0x0101] = 0xFE;
+        rom[0x4000] = 0xAA; // bank 1 sentinel
+        rom[0x8000] = 0xBB; // bank 2 sentinel
+        rom
+    }
+
+    /// 32 KB MBC5+RAM ROM with 8 KB SRAM.
+    fn mbc5_rom_with_ram() -> Vec<u8> {
+        let mut rom = vec![0u8; 0x8000];
+        rom[0x0147] = 0x1B; // MBC5+RAM+BATTERY
+        rom[0x0149] = 0x02; // 8 KB RAM
+        rom[0x0100] = 0x18; // JR -2
+        rom[0x0101] = 0xFE;
+        rom
+    }
+
+    #[test]
+    fn snapshot_identity() {
+        let mut core = GameBoyCore::new();
+        core.load_rom(&minimal_rom(), false).unwrap();
+
+        for _ in 0..5 { core.step_frame(); }
+        let snap_a = core.snapshot();
+
+        for _ in 0..5 { core.step_frame(); }
+        core.restore(&snap_a).unwrap();
+        let snap_b = core.snapshot();
+
+        assert_eq!(snap_a, snap_b, "snapshot after restore must be byte-identical");
+    }
+
+    #[test]
+    fn snapshot_counters_preserved() {
+        let mut core = GameBoyCore::new();
+        core.load_rom(&minimal_rom(), false).unwrap();
+
+        for _ in 0..4 { core.step_frame(); }
+        let frame_count_before = core.frame_count;
+        let total_cycles_before = core.total_cycles;
+
+        let snap = core.snapshot();
+        for _ in 0..10 { core.step_frame(); }
+
+        core.restore(&snap).unwrap();
+        assert_eq!(core.frame_count, frame_count_before);
+        assert_eq!(core.total_cycles, total_cycles_before);
+    }
+
+    #[test]
+    fn snapshot_audio_ring_buffer_preserved() {
+        let mut core = GameBoyCore::new();
+        core.load_rom(&minimal_rom(), false).unwrap();
+
+        // Run until the APU has produced samples.
+        core.step_samples(128);
+        let sample_count = core.apu.sample_buf.len();
+        assert!(sample_count > 0, "expected audio samples before snapshot");
+        let sample_snapshot: Vec<f32> = core.apu.sample_buf.clone();
+
+        let snap = core.snapshot();
+        core.restore(&snap).unwrap();
+
+        // Ring buffer must be intact: same length, same values.
+        assert_eq!(core.apu.sample_buf.len(), sample_count,
+            "restore() must not touch the audio ring buffer");
+        assert_eq!(core.apu.sample_buf, sample_snapshot);
+    }
+
+    #[test]
+    fn snapshot_cart_ram_preserved() {
+        let mut core = GameBoyCore::new();
+        core.load_rom(&mbc5_rom_with_ram(), false).unwrap();
+
+        // Directly load known data into cart RAM (bypasses MBC enable logic).
+        let original: Vec<u8> = (0..8).collect();
+        core.memory.load_cartridge_ram(&original);
+
+        let snap = core.snapshot();
+
+        // Overwrite cart RAM after snapshotting.
+        let zeroed = vec![0u8; 8];
+        core.memory.load_cartridge_ram(&zeroed);
+        assert_eq!(core.get_cartridge_ram()[0], 0);
+
+        core.restore(&snap).unwrap();
+        assert_eq!(&core.get_cartridge_ram()[..8], &original[..]);
+    }
+
+    #[test]
+    fn snapshot_mbc_banking_preserved() {
+        let mut core = GameBoyCore::new();
+        core.load_rom(&mbc1_multibank_rom(), false).unwrap();
+
+        // Switch to ROM bank 2 and verify the sentinel.
+        core.write_byte(0x2000, 0x02);
+        assert_eq!(core.read_byte(0x4000), 0xBB, "bank 2 sentinel before snapshot");
+
+        let snap = core.snapshot();
+
+        // Switch away from bank 2.
+        core.write_byte(0x2000, 0x01);
+        assert_eq!(core.read_byte(0x4000), 0xAA, "bank 1 after switching away");
+
+        core.restore(&snap).unwrap();
+        assert_eq!(core.read_byte(0x4000), 0xBB, "bank 2 sentinel restored");
+    }
+
+    #[test]
+    fn snapshot_invalid_magic() {
+        let mut core = GameBoyCore::new();
+        core.load_rom(&minimal_rom(), false).unwrap();
+        let mut bad = core.snapshot();
+        bad[0] = b'X'; // corrupt magic
+        assert!(core.restore(&bad).is_err());
+    }
+
+    #[test]
+    fn snapshot_empty_buffer() {
+        let mut core = GameBoyCore::new();
+        core.load_rom(&minimal_rom(), false).unwrap();
+        assert!(core.restore(&[]).is_err());
+    }
+
+    #[test]
+    fn snapshot_truncated() {
+        let mut core = GameBoyCore::new();
+        core.load_rom(&minimal_rom(), false).unwrap();
+        let snap = core.snapshot();
+        let truncated = &snap[..snap.len() / 2];
+        assert!(core.restore(truncated).is_err());
+    }
+
+    #[test]
+    fn snapshot_wrong_version() {
+        let mut core = GameBoyCore::new();
+        core.load_rom(&minimal_rom(), false).unwrap();
+        let mut snap = core.snapshot();
+        snap[7] = 0xFF; // version byte is at index 7 (after 7-byte magic)
+        assert!(core.restore(&snap).is_err());
     }
 }

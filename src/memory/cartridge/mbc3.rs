@@ -133,4 +133,19 @@ impl Cartridge for Mbc3 {
     fn tick_rtc(&mut self) {
         self.rtc.tick();
     }
+
+    fn snapshot_banking(&self) -> Vec<u8> {
+        let mut w = crate::snapshot::SnapWriter::new();
+        w.u16(self.rom_bank); w.u8(self.ram_bank); w.bool(self.ram_enabled);
+        self.rtc.snapshot(&mut w);
+        w.into_vec()
+    }
+
+    fn restore_banking(&mut self, data: &[u8]) {
+        let mut r = crate::snapshot::SnapReader::new(data);
+        if let (Ok(rb), Ok(rab), Ok(re)) = (r.u16(), r.u8(), r.bool()) {
+            self.rom_bank = rb; self.ram_bank = rab; self.ram_enabled = re;
+            let _ = self.rtc.restore_from(&mut r);
+        }
+    }
 }

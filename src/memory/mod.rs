@@ -756,6 +756,59 @@ impl Default for Memory {
     }
 }
 
+impl crate::snapshot::Snapshot for Memory {
+    fn snapshot(&self, w: &mut crate::snapshot::SnapWriter) {
+        // VRAM (2 banks × 8192 = 16 KB)
+        w.bytes(&self.vram[0]); w.bytes(&self.vram[1]);
+        // WRAM (8 banks × 4096 = 32 KB)
+        for bank in &self.wram { w.bytes(bank); }
+        w.bytes(&self.oam); w.bytes(&self.io); w.bytes(&self.hram); w.u8(self.ie);
+        // CGB state
+        w.bool(self.cgb.mode);
+        w.bytes(&self.cgb.bg_palette_ram); w.bytes(&self.cgb.obj_palette_ram);
+        w.u8(self.cgb.bcps); w.u8(self.cgb.ocps);
+        w.u8(self.cgb.vram_bank as u8); w.u8(self.cgb.wram_bank as u8);
+        w.bool(self.cgb.double_speed); w.bool(self.cgb.speed_armed);
+        w.u16(self.cgb.hdma_source); w.u16(self.cgb.hdma_dest);
+        w.u8(self.cgb.hdma_len); w.bool(self.cgb.hdma_active); w.bool(self.cgb.hdma_hblank);
+        // MBC banking registers
+        let mbc = self.cartridge.snapshot_banking();
+        w.u16(mbc.len() as u16); w.bytes(&mbc);
+        // Cartridge RAM
+        let cart_ram = self.cartridge.ram_data();
+        w.u32(cart_ram.len() as u32); w.bytes(cart_ram);
+    }
+
+    fn restore_from(&mut self, r: &mut crate::snapshot::SnapReader) -> Result<(), &'static str> {
+        self.vram[0].copy_from_slice(r.bytes(0x2000)?);
+        self.vram[1].copy_from_slice(r.bytes(0x2000)?);
+        for bank in self.wram.iter_mut() { bank.copy_from_slice(r.bytes(0x1000)?); }
+        self.oam.copy_from_slice(r.bytes(0xA0)?);
+        self.io.copy_from_slice(r.bytes(0x80)?);
+        self.hram.copy_from_slice(r.bytes(0x7F)?);
+        self.ie = r.u8()?;
+        // CGB state
+        self.cgb.mode = r.bool()?;
+        self.cgb.bg_palette_ram.copy_from_slice(r.bytes(64)?);
+        self.cgb.obj_palette_ram.copy_from_slice(r.bytes(64)?);
+        self.cgb.bcps = r.u8()?; self.cgb.ocps = r.u8()?;
+        self.cgb.vram_bank = r.u8()? as usize; self.cgb.wram_bank = r.u8()? as usize;
+        self.cgb.double_speed = r.bool()?; self.cgb.speed_armed = r.bool()?;
+        self.cgb.hdma_source = r.u16()?; self.cgb.hdma_dest = r.u16()?;
+        self.cgb.hdma_len = r.u8()?; self.cgb.hdma_active = r.bool()?;
+        self.cgb.hdma_hblank = r.bool()?;
+        // MBC banking registers
+        let mbc_len = r.u16()? as usize;
+        let mbc_data = r.bytes(mbc_len)?.to_vec();
+        self.cartridge.restore_banking(&mbc_data);
+        // Cartridge RAM
+        let cart_ram_len = r.u32()? as usize;
+        let cart_ram = r.bytes(cart_ram_len)?.to_vec();
+        self.cartridge.load_ram(&cart_ram);
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

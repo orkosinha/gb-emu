@@ -145,6 +145,21 @@ impl Default for Joypad {
     }
 }
 
+impl crate::snapshot::Snapshot for Joypad {
+    fn snapshot(&self, w: &mut crate::snapshot::SnapWriter) {
+        w.bool(self.a); w.bool(self.b); w.bool(self.select); w.bool(self.start);
+        w.bool(self.right); w.bool(self.left); w.bool(self.up); w.bool(self.down);
+        w.bool(self.select_buttons); w.bool(self.select_dpad);
+    }
+
+    fn restore_from(&mut self, r: &mut crate::snapshot::SnapReader) -> Result<(), &'static str> {
+        self.a = r.bool()?; self.b = r.bool()?; self.select = r.bool()?; self.start = r.bool()?;
+        self.right = r.bool()?; self.left = r.bool()?; self.up = r.bool()?; self.down = r.bool()?;
+        self.select_buttons = r.bool()?; self.select_dpad = r.bool()?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

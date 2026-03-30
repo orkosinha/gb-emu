@@ -316,6 +316,44 @@ impl Cpu {
         self.a = 0x11;
     }
 
+    pub(crate) fn snapshot(&self, w: &mut crate::snapshot::SnapWriter) {
+        w.u8(self.a);
+        w.u8(self.f);
+        w.u8(self.b);
+        w.u8(self.c);
+        w.u8(self.d);
+        w.u8(self.e);
+        w.u8(self.h);
+        w.u8(self.l);
+        w.u16(self.sp);
+        w.u16(self.pc);
+        w.bool(self.halted);
+        w.bool(self.ime);
+        w.bool(self.ime_pending);
+        w.u64(self.instruction_count);
+    }
+
+    pub(crate) fn restore_from(
+        &mut self,
+        r: &mut crate::snapshot::SnapReader,
+    ) -> Result<(), &'static str> {
+        self.a = r.u8()?;
+        self.f = r.u8()?;
+        self.b = r.u8()?;
+        self.c = r.u8()?;
+        self.d = r.u8()?;
+        self.e = r.u8()?;
+        self.h = r.u8()?;
+        self.l = r.u8()?;
+        self.sp = r.u16()?;
+        self.pc = r.u16()?;
+        self.halted = r.bool()?;
+        self.ime = r.bool()?;
+        self.ime_pending = r.bool()?;
+        self.instruction_count = r.u64()?;
+        Ok(())
+    }
+
     /// Get current CPU state for debugging.
     #[cfg_attr(not(feature = "debug"), allow(dead_code))]
     pub fn get_debug_state(&self) -> CpuDebugState {
@@ -336,6 +374,29 @@ impl Cpu {
 impl Default for Cpu {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl crate::snapshot::Snapshot for Cpu {
+    fn snapshot(&self, w: &mut crate::snapshot::SnapWriter) {
+        w.u8(self.a); w.u8(self.f);
+        w.u8(self.b); w.u8(self.c);
+        w.u8(self.d); w.u8(self.e);
+        w.u8(self.h); w.u8(self.l);
+        w.u16(self.sp); w.u16(self.pc);
+        w.bool(self.halted); w.bool(self.ime); w.bool(self.ime_pending);
+        w.u64(self.instruction_count);
+    }
+
+    fn restore_from(&mut self, r: &mut crate::snapshot::SnapReader) -> Result<(), &'static str> {
+        self.a = r.u8()?; self.f = r.u8()?;
+        self.b = r.u8()?; self.c = r.u8()?;
+        self.d = r.u8()?; self.e = r.u8()?;
+        self.h = r.u8()?; self.l = r.u8()?;
+        self.sp = r.u16()?; self.pc = r.u16()?;
+        self.halted = r.bool()?; self.ime = r.bool()?; self.ime_pending = r.bool()?;
+        self.instruction_count = r.u64()?;
+        Ok(())
     }
 }
 

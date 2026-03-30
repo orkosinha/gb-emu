@@ -145,6 +145,27 @@ impl Rtc {
     pub fn is_rtc_register(bank: u8) -> bool {
         (0x08..=0x0C).contains(&bank)
     }
+
+    pub(crate) fn snapshot(&self, w: &mut crate::snapshot::SnapWriter) {
+        w.u8(self.s); w.u8(self.m); w.u8(self.h); w.u8(self.dl); w.u8(self.dh);
+        w.u8(self.latched_s); w.u8(self.latched_m); w.u8(self.latched_h);
+        w.u8(self.latched_dl); w.u8(self.latched_dh);
+        w.bool(self.latch_ready);
+        w.u64(self.base_timestamp);
+    }
+
+    pub(crate) fn restore_from(
+        &mut self,
+        r: &mut crate::snapshot::SnapReader,
+    ) -> Result<(), &'static str> {
+        self.s = r.u8()?; self.m = r.u8()?; self.h = r.u8()?;
+        self.dl = r.u8()?; self.dh = r.u8()?;
+        self.latched_s = r.u8()?; self.latched_m = r.u8()?; self.latched_h = r.u8()?;
+        self.latched_dl = r.u8()?; self.latched_dh = r.u8()?;
+        self.latch_ready = r.bool()?;
+        self.base_timestamp = r.u64()?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]

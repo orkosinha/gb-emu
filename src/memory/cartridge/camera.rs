@@ -236,4 +236,17 @@ impl Cartridge for PocketCamera {
     fn as_camera_mut(&mut self) -> Option<&mut Camera> {
         Some(&mut self.camera)
     }
+
+    fn snapshot_banking(&self) -> Vec<u8> {
+        let mut w = crate::snapshot::SnapWriter::new();
+        w.u16(self.rom_bank); w.u8(self.ram_bank);
+        w.into_vec()
+    }
+
+    fn restore_banking(&mut self, data: &[u8]) {
+        let mut r = crate::snapshot::SnapReader::new(data);
+        if let (Ok(rb), Ok(rab)) = (r.u16(), r.u8()) {
+            self.rom_bank = rb; self.ram_bank = rab;
+        }
+    }
 }

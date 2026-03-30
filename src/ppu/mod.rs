@@ -301,6 +301,32 @@ impl Default for Ppu {
     }
 }
 
+impl crate::snapshot::Snapshot for Ppu {
+    fn snapshot(&self, w: &mut crate::snapshot::SnapWriter) {
+        // Frame buffer and scanline_bg_info are excluded: they are ephemeral
+        // render outputs regenerated from VRAM on the next PPU tick.
+        w.u8(self.mode as u8);
+        w.u32(self.cycles);
+        w.u8(self.line); w.u8(self.window_line_counter);
+        w.bool(self.frame_ready); w.bool(self.cgb_mode);
+    }
+
+    fn restore_from(&mut self, r: &mut crate::snapshot::SnapReader) -> Result<(), &'static str> {
+        self.mode = match r.u8()? {
+            0 => PpuMode::HBlank,
+            1 => PpuMode::VBlank,
+            2 => PpuMode::OamScan,
+            3 => PpuMode::Drawing,
+            _ => return Err("invalid PPU mode"),
+        };
+        self.cycles = r.u32()?;
+        self.line = r.u8()?; self.window_line_counter = r.u8()?;
+        self.frame_ready = r.bool()?; self.cgb_mode = r.bool()?;
+        self.hblank_this_tick = false;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

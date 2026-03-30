@@ -195,6 +195,27 @@ impl Channel3 {
         self.wave_pos = 0;
     }
 
+    pub(crate) fn snapshot(&self, w: &mut crate::snapshot::SnapWriter) {
+        w.u8(self.nr30); w.u8(self.nr31); w.u8(self.nr32); w.u8(self.nr33); w.u8(self.nr34);
+        w.bool(self.enabled); w.bool(self.dac_enabled);
+        w.u32(self.freq_timer); w.u8(self.wave_pos); w.u8(self.sample_buffer);
+        w.u16(self.length_counter);
+        w.bytes(&self.wave_ram);
+    }
+
+    pub(crate) fn restore_from(
+        &mut self,
+        r: &mut crate::snapshot::SnapReader,
+    ) -> Result<(), &'static str> {
+        self.nr30 = r.u8()?; self.nr31 = r.u8()?; self.nr32 = r.u8()?;
+        self.nr33 = r.u8()?; self.nr34 = r.u8()?;
+        self.enabled = r.bool()?; self.dac_enabled = r.bool()?;
+        self.freq_timer = r.u32()?; self.wave_pos = r.u8()?; self.sample_buffer = r.u8()?;
+        self.length_counter = r.u16()?;
+        self.wave_ram.copy_from_slice(r.bytes(16)?);
+        Ok(())
+    }
+
     pub fn power_off(&mut self) {
         self.nr30 = 0;
         self.nr31 = 0;

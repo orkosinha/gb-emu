@@ -278,6 +278,29 @@ impl Channel1 {
         }
     }
 
+    pub(crate) fn snapshot(&self, w: &mut crate::snapshot::SnapWriter) {
+        w.u8(self.nr10); w.u8(self.nr11); w.u8(self.nr12); w.u8(self.nr13); w.u8(self.nr14);
+        w.bool(self.enabled); w.bool(self.dac_enabled);
+        w.u32(self.freq_timer); w.u8(self.duty_pos); w.u8(self.length_counter);
+        w.u8(self.env_volume); w.u8(self.env_timer); w.bool(self.env_running);
+        w.u8(self.sweep_timer); w.bool(self.sweep_enabled);
+        w.u16(self.shadow_freq); w.bool(self.sweep_negate_used);
+    }
+
+    pub(crate) fn restore_from(
+        &mut self,
+        r: &mut crate::snapshot::SnapReader,
+    ) -> Result<(), &'static str> {
+        self.nr10 = r.u8()?; self.nr11 = r.u8()?; self.nr12 = r.u8()?;
+        self.nr13 = r.u8()?; self.nr14 = r.u8()?;
+        self.enabled = r.bool()?; self.dac_enabled = r.bool()?;
+        self.freq_timer = r.u32()?; self.duty_pos = r.u8()?; self.length_counter = r.u8()?;
+        self.env_volume = r.u8()?; self.env_timer = r.u8()?; self.env_running = r.bool()?;
+        self.sweep_timer = r.u8()?; self.sweep_enabled = r.bool()?;
+        self.shadow_freq = r.u16()?; self.sweep_negate_used = r.bool()?;
+        Ok(())
+    }
+
     /// Called when APU power is switched off — clears all registers.
     pub fn power_off(&mut self) {
         self.nr10 = 0;

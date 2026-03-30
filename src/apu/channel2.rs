@@ -186,6 +186,24 @@ impl Channel2 {
         self.env_running = true;
     }
 
+    pub(crate) fn snapshot(&self, w: &mut crate::snapshot::SnapWriter) {
+        w.u8(self.nr21); w.u8(self.nr22); w.u8(self.nr23); w.u8(self.nr24);
+        w.bool(self.enabled); w.bool(self.dac_enabled);
+        w.u32(self.freq_timer); w.u8(self.duty_pos); w.u8(self.length_counter);
+        w.u8(self.env_volume); w.u8(self.env_timer); w.bool(self.env_running);
+    }
+
+    pub(crate) fn restore_from(
+        &mut self,
+        r: &mut crate::snapshot::SnapReader,
+    ) -> Result<(), &'static str> {
+        self.nr21 = r.u8()?; self.nr22 = r.u8()?; self.nr23 = r.u8()?; self.nr24 = r.u8()?;
+        self.enabled = r.bool()?; self.dac_enabled = r.bool()?;
+        self.freq_timer = r.u32()?; self.duty_pos = r.u8()?; self.length_counter = r.u8()?;
+        self.env_volume = r.u8()?; self.env_timer = r.u8()?; self.env_running = r.bool()?;
+        Ok(())
+    }
+
     pub fn power_off(&mut self) {
         self.nr21 = 0;
         self.nr22 = 0;

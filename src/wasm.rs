@@ -210,10 +210,38 @@ impl GameBoy {
         self.core.memory.camera_contrast()
     }
 
+    // ── Snapshot / Restore ───────────────────────────────────────────────────
+
+    /// Serialize the full emulator state to a `Uint8Array`.
+    ///
+    /// Excludes ROM data (held by the caller) and the audio output ring
+    /// buffer, so `audio_sample_buffer_ptr()` remains valid and queued
+    /// samples play through without a click after `restore()`.
+    ///
+    /// Typical sizes: ~50 KB (no cart RAM) · ~82 KB (32 KB LSDJ cart RAM).
+    pub fn snapshot(&self) -> Vec<u8> {
+        self.core.snapshot()
+    }
+
+    /// Restore emulator state from a buffer produced by `snapshot()`.
+    ///
+    /// The audio output ring buffer is preserved — no audible click.
+    /// Returns `false` if the buffer is truncated or version-incompatible.
+    pub fn restore(&mut self, state: &[u8]) -> bool {
+        self.core.restore(state).is_ok()
+    }
+
     // ── Audio ────────────────────────────────────────────────────────────────
 
     /// Pointer to the interleaved stereo f32 sample buffer (L, R, L, R, …).
-    /// Valid until the next `step_frame` or `step_samples` call.
+    ///
+    /// The pointer is **stable across `audio_clear_samples()`**: internally
+    /// `Vec::clear()` sets length to zero without reallocating, so the
+    /// backing allocation — and this pointer — never move.  Copy samples
+    /// before calling `audio_clear_samples()` to avoid reading length-0
+    /// data, but pointer stability is guaranteed.
+    ///
+    /// Valid until the next `step_frame`, `step_samples`, or `restore()` call.
     pub fn audio_sample_buffer_ptr(&self) -> *const f32 {
         self.core.apu.sample_buf.as_ptr()
     }
