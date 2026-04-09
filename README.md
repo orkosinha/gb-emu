@@ -17,7 +17,7 @@ A cycle-accurate Game Boy and Game Boy Color emulator. Targets WebAssembly (via 
 npm install @orkosinha/gb-emu
 ```
 
-API: [`src/wasm.rs`](https://github.com/orkosinha/gb-emu/blob/main/src/wasm.rs)
+API: [`src/wasm.rs`](https://github.com/orkosinha/gb-emu/blob/main/src/wasm.rs#L31)
 
 ### C FFI
 
@@ -34,7 +34,7 @@ API: [`include/gb_emu.h`](https://github.com/orkosinha/gb-emu/blob/main/include/
 gb-emu = { git = "https://github.com/orkosinha/gb-emu" }
 ```
 
-API: [`src/core.rs`](https://github.com/orkosinha/gb-emu/blob/main/src/core.rs)
+API: [`src/core.rs`](https://github.com/orkosinha/gb-emu/blob/main/src/core.rs#L294)
 
 ## Release
 
